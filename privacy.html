@@ -41,18 +41,19 @@
   <p>The data is used only to provide the user-facing features of the owner's own Home Assistant: showing device status, showing camera streams, recording an event history and sending notifications. In keeping with the spirit of the Google API Services User Data Policy, including its Limited Use requirements, this data is used only to provide those features to the owner. It is not used for any other purpose.</p>
 
   <h2>5. Where the data is processed and stored</h2>
-  <p>The data is processed and stored only on the owner's own Home Assistant system, which runs at the owner's home. Event history is kept there. Notifications are sent to the owner's own phone through the Home Assistant companion app.</p>
+  <p>The data is processed and stored only on the owner's own Home Assistant system, which runs at the owner's home. Event history is kept there. Notifications are sent to the owner's own phone through the Home Assistant companion app, which delivers them using its standard push notification service and the phone platform's push service.</p>
 
   <h2>6. Sharing</h2>
-  <p>The data is not sold, shared or disclosed to anyone. It is not used for advertising or analytics. No third parties receive it other than Google's own services, which carry the data between the owner's Nest devices, the Smart Device Management API, Google Cloud Pub/Sub and Home Assistant.</p>
+  <p>The data is not sold, shared or disclosed to anyone. It is not used for advertising or analytics. It passes only through the services needed to run the features above: Google's own services, which carry the data between the owner's Nest devices, the Smart Device Management API, Google Cloud Pub/Sub and Home Assistant, and the push notification services that deliver notifications to the owner's phone.</p>
 
   <h2>7. Retention</h2>
   <p>Data is kept on Home Assistant according to its history and retention settings, until the owner deletes it.</p>
 
   <h2>8. Revoking access</h2>
-  <p>The owner can stop Home JARVIS's access at any time in either of these ways:</p>
+  <p>The owner can stop Home JARVIS's access at any time in any of these ways:</p>
   <ul>
-    <li>In the Google Account, under Security, remove Home JARVIS from Third-party apps with account access, or remove the partner connection in the Nest app.</li>
+    <li>In the Google Account security settings, remove Home JARVIS from the list of third-party apps and services with account access.</li>
+    <li>In the Nest app, remove the Home JARVIS partner connection.</li>
     <li>In Home Assistant, remove the Google Nest integration.</li>
   </ul>
 
