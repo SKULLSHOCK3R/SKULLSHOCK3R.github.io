@@ -118,3 +118,6 @@ footer.site p { font-size: 14px; }
   * { scroll-behavior: auto !important; }
 }
 .certs { margin: 12px 0 0; font-size: 14px; color: var(--amber); }
+/* Justified body text; hyphenation keeps the narrow column even */
+.card p { text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; }
+.card .eyebrow, .card .bio, .card .certs, .projects li, .projects a span { text-align: left; hyphens: manual; -webkit-hyphens: manual; }
