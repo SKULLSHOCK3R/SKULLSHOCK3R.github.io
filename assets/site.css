@@ -117,3 +117,4 @@ footer.site p { font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
 }
+.certs { margin: 12px 0 0; font-size: 14px; color: var(--amber); }
