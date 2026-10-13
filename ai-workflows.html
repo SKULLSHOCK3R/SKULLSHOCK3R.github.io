@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Workflows - SKULLSHOCK3R</title>
+<meta name="description" content="Two coding assistants sharing one rulebook, with fresh-context stages and an independent final review.">
+<link rel="icon" type="image/gif" href="assets/avatar.gif">
+<link rel="stylesheet" href="assets/site.css">
+<noscript><style>body { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="stage"><canvas id="scene" width="320" height="180" aria-hidden="true"></canvas></div>
+<div class="vignette"></div>
+<div class="page">
+<div class="col">
+<nav class="site" aria-label="Main">
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="ai-workflows.html" aria-current="page">AI Workflows</a></li>
+    <li><a href="knowledge-hub.html">Knowledge Hub</a></li>
+    <li><a href="home-ai-assistant.html">Home AI Assistant</a></li>
+  </ul>
+</nav>
+
+<main id="main">
+  <section class="card" aria-labelledby="t">
+    <h1 id="t">AI Workflows</h1>
+    <p>Two coding assistants work from the same rules: J.A.R.V.I.S. runs on Claude Code and E.V. runs on Codex. The kit is open source under the MIT licence: <a href="https://github.com/SKULLSHOCK3R/ai-workflows">github.com/SKULLSHOCK3R/ai-workflows</a>.</p>
+  </section>
+
+  <section class="card" aria-labelledby="does">
+    <h2 id="does">What it does</h2>
+    <p>A single rulebook (AGENTS.md, with a byte-identical CLAUDE.md) governs both assistants, so they behave the same way regardless of which one picks up a task. Any non-trivial task is split into fresh-context stages, and the last stage is always a separate, independent review.</p>
+    <figure>
+      <svg viewBox="0 0 440 150" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="dg-title">Task flow</title>
+        <desc id="dg-desc">The coordinator hands work to planning, then production, then independent review. The reviewer reports back to the coordinator.</desc>
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6fe6ff"/>
+          </marker>
+        </defs>
+        <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" font-size="13" text-anchor="middle">
+          <rect x="6" y="40" width="88" height="46" rx="8" fill="#17335a" stroke="#6fe6ff"/>
+          <text x="50" y="68" fill="#eef4ff">Coordinator</text>
+          <rect x="118" y="40" width="88" height="46" rx="8" fill="#0d1a33" stroke="#6fe6ff"/>
+          <text x="162" y="68" fill="#eef4ff">Planning</text>
+          <rect x="230" y="40" width="88" height="46" rx="8" fill="#0d1a33" stroke="#6fe6ff"/>
+          <text x="274" y="68" fill="#eef4ff">Production</text>
+          <rect x="342" y="40" width="92" height="46" rx="8" fill="#0d1a33" stroke="#ffd479"/>
+          <text x="388" y="58" fill="#ffd479">Independent</text>
+          <text x="388" y="76" fill="#ffd479">review</text>
+          <path d="M94,63 L116,63" stroke="#6fe6ff" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <path d="M206,63 L228,63" stroke="#6fe6ff" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <path d="M318,63 L340,63" stroke="#6fe6ff" stroke-width="2" fill="none" marker-end="url(#ar)"/>
+          <path d="M388,86 L388,120 L50,120 L50,88" stroke="#b4c5e0" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#ar)"/>
+          <text x="220" y="140" fill="#b4c5e0">findings go back to the coordinator</text>
+        </g>
+      </svg>
+      <figcaption>Each stage starts with fresh context and receives only a short handoff, not the whole conversation.</figcaption>
+    </figure>
+  </section>
+
+  <section class="card" aria-labelledby="how">
+    <h2 id="how">How it is built, and the engineering practices</h2>
+    <ul class="plain">
+      <li><strong>Checked at session start.</strong> A session-start hook verifies the core files and that the two rulebook copies match by SHA-256, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. A per-message hook re-injects a short persona card.</li>
+      <li><strong>Staged work.</strong> Planning, production and independent final review run as separate fresh-context stages. There are six stage roles across three model tiers. A strict quick-task test may skip planning, but never the review.</li>
+      <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
+      <li><strong>Safe change handling.</strong> Commit before editing, no history rewriting, hashed backups, and a recovery protocol for a stage that is cut off part way.</li>
+      <li><strong>File intake.</strong> New files are checked for stability with SHA-256 and archived only after an approval.</li>
+      <li><strong>Memory.</strong> Dated, scoped lessons record corrections so the same mistake is not repeated.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site card">
+  <p>SKULLSHOCK3R. A personal site in plain HTML with a pixel-art canvas.</p>
+</footer>
+</div>
+</div>
+<script src="assets/scene.js"></script>
+</body>
+</html>

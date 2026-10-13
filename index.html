@@ -3,30 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Home JARVIS</title>
-<style>
-  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background: #ffffff; margin: 0; padding: 1.25rem; }
-  main { max-width: 40rem; margin: 0 auto; }
-  h1 { font-size: 1.75rem; margin-top: 0; }
-  a { color: #0b57d0; }
-  footer { margin-top: 2rem; font-size: 0.9rem; color: #555555; }
-  @media (prefers-color-scheme: dark) {
-    body { color: #e8e8e8; background: #14161a; }
-    a { color: #8ab4f8; }
-    footer { color: #aaaaaa; }
-  }
-</style>
+<title>SKULLSHOCK3R</title>
+<meta name="description" content="SKULLSHOCK3R: practical AI assistants and home automation with strong guardrails, by an engineer-in-training.">
+<link rel="icon" type="image/gif" href="assets/avatar.gif">
+<link rel="stylesheet" href="assets/site.css">
+<noscript><style>body { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
 </head>
 <body>
-<main>
-  <h1>Home JARVIS</h1>
-  <p>Home JARVIS is a private home automation setup for a single household. It connects the owner's own Google Nest devices (a doorbell, a porch camera and a thermostat) to the owner's own Home Assistant system, which runs on the owner's home network.</p>
-  <p>It uses Google's Smart Device Management API so that the owner can see doorbell and motion events, view camera streams on demand, and read the thermostat from Home Assistant.</p>
-  <p>Home JARVIS is not a public service. It has no sign-ups and no user accounts, and it is not available to anyone other than its owner. It does not access any Google account or device other than the owner's own.</p>
-  <p>Read the <a href="privacy.html">Privacy Policy</a> for details on what data is accessed and how it is handled.</p>
-  <footer>
-    <p>Effective date: 2026-10-13. Contact: through the <a href="https://github.com/SKULLSHOCK3R/SKULLSHOCK3R.github.io">GitHub repository</a>.</p>
-  </footer>
+<a class="skip" href="#main">Skip to content</a>
+<div id="stage"><canvas id="scene" width="320" height="180" aria-hidden="true"></canvas></div>
+<div class="vignette"></div>
+<div class="page">
+<div class="col">
+<nav class="site" aria-label="Main">
+  <ul>
+    <li><a href="index.html" aria-current="page">Home</a></li>
+    <li><a href="ai-workflows.html">AI Workflows</a></li>
+    <li><a href="knowledge-hub.html">Knowledge Hub</a></li>
+    <li><a href="home-ai-assistant.html">Home AI Assistant</a></li>
+  </ul>
+</nav>
+
+<main id="main">
+  <section class="card" aria-labelledby="top">
+    <div class="head">
+      <img id="avatar" src="assets/avatar.gif" width="64" height="64" alt="Pixel art of my dogs Loki and Smurfy playing tug-of-war">
+      <div>
+        <p class="eyebrow">Handle</p>
+        <h1 id="top">SKULLSHOCK3R</h1>
+      </div>
+    </div>
+    <p class="name">Akshith "Robin" Naidu</p>
+    <p class="bio">Process and energy engineer, Engineer-in-Training (EIT), APEGS member #72396</p>
+    <p>I build practical AI assistants and home automation, and I put strong guardrails around them: paid calls, outgoing messages and physical actions all need an explicit yes. My engineering background also includes environmental and water work.</p>
+  </section>
+
+  <section class="card" aria-labelledby="projects">
+    <h2 id="projects">Projects</h2>
+    <ul class="projects">
+      <li><a href="ai-workflows.html"><strong>AI Workflows</strong><span>Two coding assistants, one rulebook, fresh-context stages and an independent review.</span></a></li>
+      <li><a href="knowledge-hub.html"><strong>Personal Knowledge Hub</strong><span>A local notes app shown as a 3D star map you can chat with.</span></a></li>
+      <li><a href="home-ai-assistant.html"><strong>Home AI Assistant</strong><span>A local-first voice assistant for a smart home, with paid answers only after a spoken yes.</span></a></li>
+    </ul>
+    <p>The AI Workflows kit is open source (MIT licence): <a href="https://github.com/SKULLSHOCK3R/ai-workflows">github.com/SKULLSHOCK3R/ai-workflows</a>.</p>
+  </section>
+
+  <section class="card" aria-labelledby="homejarvis">
+    <h2 id="homejarvis">Home JARVIS</h2>
+    <p>Home JARVIS is the name of my private home-automation app. It connects my own Google Nest devices (a doorbell, a porch camera and a thermostat) to my own Home Assistant system through Google's Smart Device Management API. It is not a public service, has no sign-ups or other users, and touches only my own devices.</p>
+    <p><a href="privacy.html">Home JARVIS privacy policy</a></p>
+  </section>
+
+  <section class="card" aria-labelledby="findme">
+    <h2 id="findme">Find me</h2>
+    <ul class="links">
+      <li><a href="https://www.linkedin.com/in/akshith-srinivas-naidu-487b8218b">LinkedIn</a></li>
+      <li><a href="mailto:asn522@uregina.ca">Email: asn522@uregina.ca</a></li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="offclock">
+    <h2 id="offclock">Off the clock</h2>
+    <ul class="links">
+      <li><a href="https://www.instagram.com/skullshock3r/">Instagram</a></li>
+      <li><a href="https://www.facebook.com/robin.naidu">Facebook</a></li>
+      <li><a href="https://steamcommunity.com/id/skullshock3r/">Steam</a></li>
+      <li><a href="https://discord.com/users/370529215159992321">Discord</a></li>
+    </ul>
+  </section>
 </main>
+
+<footer class="site card">
+  <p>SKULLSHOCK3R. A personal site in plain HTML with a pixel-art canvas: no trackers, no cookies, no external fonts.</p>
+</footer>
+</div>
+</div>
+<script src="assets/avatar-draw.js"></script>
+<script src="assets/scene.js"></script>
 </body>
 </html>

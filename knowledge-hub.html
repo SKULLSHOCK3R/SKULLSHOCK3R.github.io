@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Knowledge Hub - SKULLSHOCK3R</title>
+<meta name="description" content="A local notes app: Markdown notes and links shown as a 3D star map you can chat with.">
+<link rel="icon" type="image/gif" href="assets/avatar.gif">
+<link rel="stylesheet" href="assets/site.css">
+<noscript><style>body { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div id="stage"><canvas id="scene" width="320" height="180" aria-hidden="true"></canvas></div>
+<div class="vignette"></div>
+<div class="page">
+<div class="col">
+<nav class="site" aria-label="Main">
+  <ul>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="ai-workflows.html">AI Workflows</a></li>
+    <li><a href="knowledge-hub.html" aria-current="page">Knowledge Hub</a></li>
+    <li><a href="home-ai-assistant.html">Home AI Assistant</a></li>
+  </ul>
+</nav>
+
+<main id="main">
+  <section class="card" aria-labelledby="t">
+    <h1 id="t">Personal Knowledge Hub</h1>
+    <p>A local notes app that turns Markdown notes and the links between them into a 3D star map you can chat with. It runs on localhost only.</p>
+  </section>
+
+  <section class="card" aria-labelledby="does">
+    <h2 id="does">What it does</h2>
+    <ul class="plain">
+      <li>Answers locally and for free first. Claude is used only after you confirm.</li>
+      <li>Swappable model "brains", browser voice, a "remember that" capture, screen-share questions, and a phone assistant through a chat bot.</li>
+      <li>A home-automation link that uses a separate, non-admin token with a hard allowlist of 15 read-only readings and 5 actions. Each action needs a confirmation that lasts 60 seconds and works once.</li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="how">
+    <h2 id="how">How it is built, and the engineering practices</h2>
+    <ul class="plain">
+      <li><strong>Archive-first retrieval.</strong> A paid question sends at most 3 notes. On a set of 33 probe questions, the average characters sent fell from 12,858 to 5,720 and the estimated cost from 2.29 to 1.47 cents, and the expected note was still sent in 25 of 25 cases where one was expected.</li>
+      <li><strong>Paid-call gate.</strong> Offers are single-use and time-limited, and state an "at most" ceiling. SDK retries are off, so one yes cannot bill three times.</li>
+      <li><strong>Strict parsing.</strong> The model id parser is strict and fuzz-tested.</li>
+      <li><strong>Testing.</strong> A 51-suite offline battery is compared run-to-run against a baseline, rather than claimed as all passing. A live preflight of 42 checks last ran free with 36 passes, 0 failures and 6 warnings. One suite of 381 checks had 0 failures. Changes keep replayable undo hunks.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site card">
+  <p>SKULLSHOCK3R. A personal site in plain HTML with a pixel-art canvas.</p>
+</footer>
+</div>
+</div>
+<script src="assets/scene.js"></script>
+</body>
+</html>
