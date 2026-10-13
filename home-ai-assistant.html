@@ -6,7 +6,7 @@
 <title>Home JARVIS (Home AI Assistant) - SKULLSHOCK3R</title>
 <meta name="description" content="A local-first voice assistant for a smart home, with paid answers only after a spoken yes.">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/site.css?v=3">
+<link rel="stylesheet" href="assets/site.css?v=4">
 <noscript><style>#stage { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
 </head>
 <body>
@@ -27,33 +27,43 @@
 <main id="main">
   <section class="card" aria-labelledby="t">
     <h1 id="t">Home JARVIS (Home AI Assistant)</h1>
-    <p>A voice assistant for a smart home that works locally first. It runs Home Assistant OS in a virtual machine on a Windows PC, on a budget of $0 by preference.</p>
+    <p>A voice assistant for my own home that keeps as much as possible on my own hardware. It runs Home Assistant OS in a virtual machine on a Windows PC I already own. The aim is to keep recurring costs to a minimum: Google charges a one-off US$5 fee for Device Access (needed for the Nest connection), and optional Claude answers are billed per use, only after I say yes.</p>
   </section>
 
   <section class="card" id="google-nest" aria-labelledby="gn">
     <h2 id="gn">Google Nest connection</h2>
-    <p class="ragged">Home JARVIS is the name of my private home-automation app. It connects my own Google Nest devices (a doorbell, a porch camera and a thermostat) to my own Home Assistant system through Google's Smart Device Management API. It is not a public service, has no sign-ups or other users, and touches only my own devices.</p>
-    <p class="ragged"><a href="privacy.html">Home JARVIS privacy policy</a></p>
+    <p>Home JARVIS is the name of my private home-automation app. It connects my own Google Nest devices (a doorbell, a porch camera and a thermostat) to my own Home Assistant system through Google's Smart Device Management API. Day to day I control the thermostat through a local connection instead. It is not a public service, has no sign-ups or other users, and touches only my own devices.</p>
+    <p><a href="privacy.html">Home JARVIS privacy policy</a></p>
+  </section>
+
+  <section class="card" aria-labelledby="cloud">
+    <h2 id="cloud">What stays local, what uses the cloud</h2>
+    <ul class="plain">
+      <li><strong>Local:</strong> speech recognition and spoken replies, a free built-in command matcher that is tried before Claude, and control of devices on my home network. A separate webcam relay on the PC serves a video stream (RTSP) only to the home server.</li>
+      <li><strong>Cloud:</strong> Nest doorbell and porch-camera events and live video come through Google's Smart Device Management API, and the cameras stream by WebRTC. Optional Claude answers go to Anthropic, only after a spoken yes.</li>
+    </ul>
   </section>
 
   <section class="card" aria-labelledby="does">
     <h2 id="does">What it does</h2>
     <ul class="plain">
-      <li>Speech in and out is local, and a "Hey Jarvis" wake word starts it.</li>
+      <li>Speech in and out runs locally.</li>
+      <li>Planned: a hands-free "Hey Jarvis" wake word, which needs a room microphone I have not added yet.</li>
       <li>Conversation is free and local first. Paid Claude answers happen only after a spoken yes within 60 seconds. A live test billed exactly one call.</li>
-      <li>Door and camera events arrive through Google's Smart Device Management API as one-tap phone alerts. The camera relay is limited to RTSP.</li>
-      <li>A small pet dashboard.</li>
+      <li>Doorbell rings arrive through Google's Smart Device Management API as one-tap phone alerts that open the live view, and the porch camera's motion events are received too.</li>
+      <li>A pet dashboard with three buttons, each asking for confirmation first. TV time turns the TV on with a video I picked and switches it off after a set time. Calm audio plays a calm radio station on a smart speaker for a set time. Stop all ends both. Scheduled versions are built but stay off until I choose times.</li>
     </ul>
   </section>
 
   <section class="card" aria-labelledby="how">
-    <h2 id="how">How it is built, and the engineering practices</h2>
+    <h2 id="how">How I built it</h2>
     <ul class="plain">
       <li><strong>Safe defaults.</strong> New devices are not exposed to voice by default, and physical actions sit behind a confirmation.</li>
       <li><strong>Careful live changes.</strong> Every live change starts with a full backup, then is validated and read back. API calls are logged with secrets masked, versions and logs are re-read afterwards, and the evidence is scanned for hardware addresses, device identifiers and tokens before it is kept.</li>
       <li><strong>Stale-data rule.</strong> A reading shows its age first, and is flagged if the device was disconnected or the data is over 6 hours old.</li>
     </ul>
   </section>
+  <p class="back"><a href="index.html#projects">Back to projects</a></p>
 </main>
 
 <footer class="site card">

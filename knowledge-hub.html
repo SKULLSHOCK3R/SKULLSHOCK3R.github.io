@@ -6,7 +6,7 @@
 <title>Personal Knowledge Hub - SKULLSHOCK3R</title>
 <meta name="description" content="A local notes app: Markdown notes and links shown as a 3D star map you can chat with.">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/site.css?v=3">
+<link rel="stylesheet" href="assets/site.css?v=4">
 <noscript><style>#stage { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
 </head>
 <body>
@@ -27,27 +27,39 @@
 <main id="main">
   <section class="card" aria-labelledby="t">
     <h1 id="t">Personal Knowledge Hub</h1>
-    <p>A local notes app that turns Markdown notes and the links between them into a 3D star map you can chat with. It runs on localhost only.</p>
+    <p>A local notes app that turns Markdown notes and the links between them into a 3D star map you can chat with.</p>
+  </section>
+
+  <section class="card" aria-labelledby="local">
+    <h2 id="local">What stays on my PC</h2>
+    <ul class="plain">
+      <li>The app's server listens only on my PC, not on the network.</li>
+      <li>Answers are drawn from my notes, for free, wherever possible.</li>
+      <li>Questions that need reasoning go to Claude over the internet, and only after I confirm the cost.</li>
+      <li>The phone assistant is a Telegram bot, so those messages pass through Telegram.</li>
+    </ul>
   </section>
 
   <section class="card" aria-labelledby="does">
     <h2 id="does">What it does</h2>
     <ul class="plain">
-      <li>Answers locally and for free first. Claude is used only after you confirm.</li>
-      <li>Swappable model "brains", browser voice, a "remember that" capture, screen-share questions, and a phone assistant through a chat bot.</li>
-      <li>A home-automation link that uses a separate, non-admin token with a hard allowlist of 15 read-only readings and 5 actions. Each action needs a confirmation that lasts 60 seconds and works once.</li>
+      <li>Answers locally and for free first. Claude is used only after I confirm.</li>
+      <li>A model switch lets me change the AI model from a fixed list of supported names.</li>
+      <li>Browser voice, a "remember that" capture, and screen-share questions.</li>
+      <li>A link to my home-automation system that uses a separate, limited (non-admin) token and an allowlist of 15 readings and 5 actions. Anything else is refused. Each action needs a confirmation that works once and expires after 60 seconds.</li>
     </ul>
   </section>
 
   <section class="card" aria-labelledby="how">
-    <h2 id="how">How it is built, and the engineering practices</h2>
+    <h2 id="how">How I built it</h2>
     <ul class="plain">
-      <li><strong>Archive-first retrieval.</strong> A paid question sends at most 3 notes. On a set of 33 probe questions, the average characters sent fell from 12,858 to 5,720 and the estimated cost from 2.29 to 1.47 cents, and the expected note was still sent in 25 of 25 cases where one was expected.</li>
-      <li><strong>Paid-call gate.</strong> Offers are single-use and time-limited, and state an "at most" ceiling. SDK retries are off, so one yes cannot bill three times.</li>
-      <li><strong>Strict parsing.</strong> The model id parser is strict and fuzz-tested.</li>
-      <li><strong>Testing.</strong> A 51-suite offline battery is compared run-to-run against a baseline, rather than claimed as all passing. A live preflight of 42 checks last ran free with 36 passes, 0 failures and 6 warnings. One suite of 381 checks had 0 failures. Changes keep replayable undo hunks.</li>
+      <li><strong>Sending fewer notes.</strong> Before a paid question goes to Claude, a free scan of the notes picks the ones worth sending: at most 3 (4 when the scan finds nothing), instead of 6. I measured this offline on 4 October 2026, when the feature shipped, over 33 test questions, with Opus 5.5 priced at US$4 per million input tokens and US$20 per million output tokens. The average text sent fell from 12,858 to 5,720 characters (about 56% fewer), and the estimated cost fell from 2.29 to 1.47 US cents (about 36% lower). The expected note was still included in 25 of the 25 cases where one was expected; that checks which notes were sent, not whether the answers were accurate. The costs are estimates, not billed amounts.</li>
+      <li><strong>Paid-call gate.</strong> Every paid call needs a single-use offer that I answer, and each offer states an "at most" cost ceiling. The software library's automatic retries are switched off, because its default of two retries could bill one confirmed yes three times.</li>
+      <li><strong>Exact model names.</strong> The model-name parser is strict: it builds the exact name from the family and version and refuses anything not on the supported list. Fuzz testing (feeding it many near-miss inputs) caught a near match that loaded the wrong model, and it is now refused.</li>
+      <li><strong>Testing (13 October 2026).</strong> A 51-suite offline test battery had 32 suites exit cleanly and 19 older suites report failures; those 19 reported the same failures as the previous run, so no new failures appeared. A live preflight (a health check of the running app), run free so it made no paid calls, ran 42 checks: 36 passed, 0 failed and 6 gave warnings (2 paid checks that the free run skips, and 4 about optional features that are not set up). The test suite for the home-automation link ran 381 checks with 0 failures. Changes to tested files are recorded as reversible patches.</li>
     </ul>
   </section>
+  <p class="back"><a href="index.html#projects">Back to projects</a></p>
 </main>
 
 <footer class="site card">

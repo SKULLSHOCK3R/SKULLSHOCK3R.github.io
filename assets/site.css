@@ -31,7 +31,7 @@ body {
 }
 .page { position: relative; z-index: 2; padding: 5vh 4vw 6vh; }
 /* Content stays in a left column so it does not cover the hat on desktop. */
-.col { width: min(28.5rem, 100%); }
+.col { width: clamp(28rem, 35vw, 34rem); max-width: 100%; }
 
 .skip {
   position: absolute; left: 8px; top: -60px; z-index: 10; padding: 8px 14px;
@@ -110,15 +110,42 @@ footer.site p { font-size: 14px; }
   .head { gap: 14px; }
   #avatar { width: 104px; height: 104px; }
   h1 { font-size: 24px; }
+  /* Phone navigation: a 2 x 2 grid of large tap targets. */
+  nav.site ul { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  nav.site a {
+    display: flex; align-items: center; justify-content: center; min-height: 44px;
+    padding: 10px 8px; text-align: center; font-size: 15px;
+  }
+  .copy { min-height: 44px; padding: 8px 16px; }
+  .back a { display: flex; align-items: center; justify-content: center; min-height: 44px; }
 }
-@media (max-width: 400px) {
-  nav.site a { padding: 7px 9px; font-size: 13px; }
+/* Task-flow diagram: horizontal on wider screens, vertical on phones so the labels stay readable. */
+.flow-v { display: none; }
+@media (max-width: 560px) {
+  .flow-h { display: none; }
+  .flow-v { display: block; max-width: 340px; margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
 }
 .certs { margin: 12px 0 0; font-size: 14px; color: var(--amber); }
-/* Justified body text; hyphenation keeps the narrow column even */
-.card p { text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; }
-.card .eyebrow, .card .bio, .card .certs, .projects li, .projects a span { text-align: left; hyphens: manual; -webkit-hyphens: manual; }
-.card p.ragged { text-align: left; }
+
+/* Contact line, Discord copy button, back link */
+.contact { margin: 0 0 12px; color: var(--muted); }
+.links .discord {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 7px 14px; border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); font-size: 15px;
+}
+.copy {
+  font: inherit; font-size: 14px; color: var(--ink); background: rgba(23, 51, 90, 0.6);
+  border: 1px solid var(--edge); border-radius: 6px; padding: 3px 12px; cursor: pointer;
+}
+.copy[hidden] { display: none; }
+.copy:hover { border-color: var(--cyan); background: #17335a; }
+.copied { font-size: 14px; color: var(--amber); }
+.back { margin: 0 0 14px; }
+.back a {
+  display: inline-block; padding: 7px 14px; border: 1px solid var(--edge); border-radius: 8px;
+  background: var(--panel); color: var(--ink); text-decoration: none; font-size: 15px;
+}
+.back a:hover { border-color: var(--cyan); }
