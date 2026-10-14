@@ -550,13 +550,35 @@
     avT += dt;
     if (actx && avT >= AvatarArt.DELAY / 1000) { avT = 0; avI = (avI + 1) % AvatarArt.FRAMES; drawAvatar(avI); }
   }
-  function start() { if (!raf && !(reduce && reduce.matches) && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+  var KEY = 'bg-anim', choice = null;                    // choice: 'paused' | 'playing' | null (no explicit choice yet)
+  try { choice = localStorage.getItem(KEY); } catch (e) {}
+  if (choice !== 'paused' && choice !== 'playing') choice = null;
+  function userPaused() { return choice ? choice === 'paused' : !!(reduce && reduce.matches); }
+  function start() { if (!raf && !userPaused() && !document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); } }
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
   var still = /[?&]t=([\d.]+)/.exec(location.search);
-  render(still ? parseFloat(still[1]) : 0.84); drawAvatar(still ? 3 : 5);       // first frame at once (also the reduced-motion still)
+  render(still ? parseFloat(still[1]) : 0.84); drawAvatar(still ? 3 : 5);       // first frame at once (also the paused / reduced-motion still)
   if (!still) {
+    /* pause / play control: injected here so every page gets the same button */
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.id = 'bg-toggle'; btn.className = 'bg-toggle';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><g class="ico-pause"><rect x="6" y="5" width="4.2" height="14" rx="1"/><rect x="13.8" y="5" width="4.2" height="14" rx="1"/></g><path class="ico-play" d="M8 5.2v13.6a.6.6 0 0 0 .9.5l11-6.8a.6.6 0 0 0 0-1L8.9 4.7a.6.6 0 0 0-.9.5z"/></svg>';
+    function sync() {
+      var p = userPaused();
+      btn.setAttribute('aria-pressed', p ? 'true' : 'false');
+      btn.setAttribute('aria-label', p ? 'Play background animation' : 'Pause background animation');
+      btn.title = p ? 'Play background animation' : 'Pause background animation';
+      btn.classList.toggle('is-paused', p);
+    }
+    btn.addEventListener('click', function () {
+      choice = userPaused() ? 'playing' : 'paused';
+      try { localStorage.setItem(KEY, choice); } catch (e) {}
+      sync(); choice === 'paused' ? stop() : start();
+    });
+    document.body.appendChild(btn);
+    sync();
     document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
-    if (reduce && reduce.addEventListener) reduce.addEventListener('change', function () { reduce.matches ? stop() : start(); });
+    if (reduce && reduce.addEventListener) reduce.addEventListener('change', function () { sync(); userPaused() ? stop() : start(); });
     start();
   }
 })();
