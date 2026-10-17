@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Personal Knowledge Hub - SKULLSHOCK3R</title>
-<meta name="description" content="A local notes app: Markdown notes and links shown as a 3D star map you can chat with.">
+<meta name="description" content="A local notes app: Markdown notes and links shown as a 3D star map you can chat with, with a searchable map of my own PC and an observe-only research bay.">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/site.css?v=5">
+<link rel="stylesheet" href="assets/site.css?v=6">
 <noscript><style>#stage { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
 </head>
 <body>
@@ -46,8 +46,25 @@
       <li>Answers locally and for free first. Claude is used only after I confirm.</li>
       <li>A model switch lets me change the AI model from a fixed list of supported names.</li>
       <li>Browser voice, a "remember that" capture, and screen-share questions.</li>
+      <li><strong>A map of my own PC.</strong> A local index of file names across my chosen folders, shown as stars on the map. File-content search covers plain text, Markdown, CSV, JSON, Word and PDF files: it keeps the first 64 KB of text per file, skips files over 20 MB, cloud-only files, files with secret-looking names and game folders, and shows only short snippets that are never logged. "Find my file" falls back to text when no name matches, and "open my file" never opens a file that was found only by its text.</li>
+      <li><strong>Nightly rescan.</strong> The index refreshes by itself at 4:00 a.m. local time, and a manual rescan is available. The index stays on my PC and is never served to the network.</li>
+      <li><strong>Explorer highlight.</strong> Opening a result selects the file in Windows File Explorer, even when that folder is already open.</li>
+      <li><strong>Scripts cannot spend.</strong> A request from a local script (rather than the hub's own page on my PC or my paired phone) cannot confirm a paid offer or answer an inbox question. A script may decline an offer or let it lapse, but it may not spend.</li>
+      <li><strong>Wake word (phase 1, built and tested).</strong> Saying the wake word shows the hub's widget on my PC, with a chime. Nothing listens for a command afterwards. In this mode the listener opens no network connection, and its logs hold no audio, transcripts or replies. I am switching it on step by step.</li>
       <li>A link to my home-automation system that uses a separate, limited (non-admin) token and an allowlist of 15 readings and 5 actions. Anything else is refused. Each action needs a confirmation that works once and expires after 60 seconds.</li>
     </ul>
+  </section>
+
+  <section class="card" aria-labelledby="pythagoras">
+    <h2 id="pythagoras">Research bay: Pythagoras</h2>
+    <p>Pythagoras is a research bay inside the hub. It looks at public web pages in an observe-only way, using an open-source page-inspection tool in a throwaway headless browser (a browser with no visible window that is deleted afterwards).</p>
+    <ul class="plain">
+      <li><strong>Observe only.</strong> It never clicks, types, signs in or sends cookies or credentials.</li>
+      <li><strong>Public pages only.</strong> It refuses local and private addresses, raw IP addresses, file paths and local development servers. An independent review on 15 October 2026 probed 28 kinds of refusal.</li>
+      <li><strong>One command at a time.</strong> Only a short allowlist of commands is accepted, and the final address is checked again after any redirect.</li>
+      <li><strong>Pinned tool.</strong> The inspection tool is version-pinned, the hub checks the installed version and integrity hash against the pins, and I installed the tool by hand after checking its registry signatures.</li>
+    </ul>
+    <p>It belongs to the ethics layer described on the <a href="ai-workflows.html#shaka">AI Workflows page</a>.</p>
   </section>
 
   <section class="card" aria-labelledby="how">
