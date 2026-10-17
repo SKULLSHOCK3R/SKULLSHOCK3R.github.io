@@ -170,3 +170,11 @@ footer.site p { font-size: 14px; }
 
 /* keep the last content clear of the fixed button */
 body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+/* Tables: visible borders on every cell; wide tables scroll sideways inside their card. */
+.table-wrap { overflow-x: auto; margin: 0 0 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--muted); }
+table, th, td { border: 1px solid rgba(111, 230, 255, 0.7); }
+th, td { padding: 6px 7px; text-align: left; vertical-align: top; }
+th { color: var(--ink); background: rgba(23, 51, 90, 0.6); }
+caption { text-align: left; padding: 0 0 6px; font-size: 14px; color: var(--muted); caption-side: top; }

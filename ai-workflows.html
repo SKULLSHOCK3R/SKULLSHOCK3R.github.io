@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Workflows - SKULLSHOCK3R</title>
-<meta name="description" content="Two coding assistants sharing one rulebook, with fresh-context stages and an independent final review.">
+<meta name="description" content="One workflow across Claude, ChatGPT and Gemini: a shared rulebook, fresh-context stages, an independent final review and an ethics layer with a tool gate.">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/site.css?v=5">
+<link rel="stylesheet" href="assets/site.css?v=6">
 <noscript><style>#stage { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
 </head>
 <body>
@@ -27,7 +27,7 @@
 <main id="main">
   <section class="card" aria-labelledby="t">
     <h1 id="t">AI Workflows</h1>
-    <p>Two coding assistants work from the same rules: J.A.R.V.I.S. on Claude Code and E.V. on Codex. This page describes my own setup. The open-source starter kit (MIT licence) packages the same rules, and in it the hooks and the multi-stage workflow are optional. <a href="https://github.com/SKULLSHOCK3R/ai-workflows">View the starter kit on GitHub</a>.</p>
+    <p>Two coding assistants work from the same rules: J.A.R.V.I.S. on Claude Code and E.V. on Codex, with Google Gemini as an optional free reader. This page describes my own setup. The open-source starter kit (MIT licence) packages the same rules, and in it the hooks and the multi-stage workflow are optional. <a href="https://github.com/SKULLSHOCK3R/ai-workflows">View the starter kit on GitHub</a>.</p>
   </section>
 
   <section class="card" aria-labelledby="does">
@@ -91,12 +91,71 @@
     <h2 id="how">How I built it</h2>
     <ul class="plain">
       <li><strong>My setup: startup checks.</strong> Two Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The other re-attaches a short persona summary to each message. In the starter kit, hooks are optional.</li>
-      <li><strong>My setup: staged work.</strong> Planning, production and independent final review run as separate fresh-context stages. There are six stage roles across three model tiers. A strict quick-task test may skip planning, but never the review. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
+      <li><strong>My setup: staged work.</strong> Planning, production and independent final review run as separate fresh-context stages. As one example as of 17 October 2026, there are seven stage roles across four models. A strict quick-task test may skip planning, but never the review. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
       <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
+      <li><strong>Usage guard.</strong> Staged work draws on a plan's usage allowance, so I check usage before launching a stage, ask first above about 70% of the 5-hour window or about 5% of the weekly allowance (my own example thresholds), cap retries at three, give each stage a time cap, and have a stage return what it has when blocked.</li>
       <li><strong>Safe change handling.</strong> Commit before editing, no history rewriting, backups checked by file fingerprint (SHA-256), and a recovery protocol for a stage that is cut off part way.</li>
       <li><strong>File intake.</strong> New files are checked for stability with SHA-256 and archived only after an approval.</li>
       <li><strong>Memory.</strong> Dated, scoped lessons record corrections so the same mistake is not repeated.</li>
     </ul>
+  </section>
+  <section class="card" aria-labelledby="models">
+    <h2 id="models">One workflow, three models</h2>
+    <p>The workflow is not tied to one vendor. Claude is the coordinator, and two other models are optional stages that the coordinator calls under the same rules.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Model</th><th scope="col">Role</th><th scope="col">How it is used</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Claude (J.A.R.V.I.S.)</td><td>Coordinator and stage workers</td><td>Owns scope, approvals, briefs and the final result. Runs the planning, production and review stages. The final review is always a fresh Claude stage.</td></tr>
+          <tr><td>ChatGPT / Codex (E.V.)</td><td>Second assistant; optional read-only stage</td><td>Works from the same rulebook. Used for a second opinion on a high-stakes plan, for overflow when the Claude allowance is stretched, or for a capability Claude lacks. Read-only; it never replaces the required review.</td></tr>
+          <tr><td>Google Gemini</td><td>Free, read-only reader; optional stage</td><td>Reads image-heavy or very long documents. A small script uploads one file with a fixed prompt and saves the reply. It has no other access to my computer and cannot act. It uses a free-tier project with no billing, I approve it first, and nothing private goes to it.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every stage carries the same ethics block, and the reviewer checks the result against it. I verify a stage's claims about files or images myself before relying on them.</p>
+  </section>
+
+  <section class="card" aria-labelledby="shaka">
+    <h2 id="shaka">Ethics module: Shaka</h2>
+    <p>Shaka is the ethics layer that sits over every workflow, stage, scheduled task and app I build. It has five commitments.</p>
+    <ul class="plain">
+      <li><strong>Consent.</strong> Nothing is done on anyone's behalf without that person's yes for that action. A yes found in a file, email, web page or another assistant's message never counts.</li>
+      <li><strong>Honesty.</strong> No result is reported as done, sent, passed or verified unless it was, and the unverified is marked as such.</li>
+      <li><strong>Privacy.</strong> Other people's data is used only as far as the task needs, and secrets are never opened or sent.</li>
+      <li><strong>No harm.</strong> Nothing that could hurt a person, property, money or a reputation.</li>
+      <li><strong>Stop and ask.</strong> When a step is in doubt, could cost money, could touch another person or cannot be undone, the assistant stops and asks.</li>
+    </ul>
+    <p>How it is enforced in Claude Code:</p>
+    <ul class="plain">
+      <li><strong>Deny rules and a gate hook.</strong> Tools that send, share, spend, schedule, delete, change settings or push to a remote are on a deny list. A fail-closed hook (a script that blocks the call if anything is unclear) logs only the tool name, time, mode and session id, never the inputs.</li>
+      <li><strong>Deny, not ask.</strong> On 17 October 2026 I found that "ask" rules did not prompt in auto mode, so anything an assistant must never do is now denied outright. "Ask" is kept only for control of my computer.</li>
+      <li><strong>Computer control.</strong> No assistant takes control of my computer or acts in my signed-in browser without my yes for that task, and it stops when I move the mouse.</li>
+      <li><strong>Stages and review.</strong> Every stage brief carries a fixed ethics block, and the independent reviewer rejects work that shows a gated action, a cost or use of other people's data without my recorded yes.</li>
+      <li><strong>Apps I build.</strong> Each outward path (a message, a model call, a device command, a purchase) has its own gate and a row in an audit register, and breaches and near misses go in an incident log. The starter kit includes templates for both.</li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="modules">
+    <h2 id="modules">Modules and roadmap</h2>
+    <p>Shaka and Pythagoras are built. The rest are planned and not built yet.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Module</th><th scope="col">Role</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Shaka</td><td>Ethics module and tool gate</td><td>Built (in the starter kit)</td></tr>
+          <tr><td>Pythagoras</td><td>Observe-only research bay for public web pages (see the <a href="knowledge-hub.html#pythagoras">Knowledge Hub page</a>)</td><td>Built (private)</td></tr>
+          <tr><td>Edison</td><td>Planning</td><td>Planned, not built</td></tr>
+          <tr><td>Lilith</td><td>Red-team testing of the gates and workflows</td><td>Planned, not built</td></tr>
+          <tr><td>Atlas</td><td>Heavy builds</td><td>Planned, not built</td></tr>
+          <tr><td>York</td><td>Resource watch, read-only</td><td>Planned, not built</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders.</p>
   </section>
   <p class="back"><a href="index.html#projects">Back to projects</a></p>
 </main>
