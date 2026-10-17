@@ -32,15 +32,15 @@
 
   <section class="card" id="google-nest" aria-labelledby="gn">
     <h2 id="gn">Google Nest connection</h2>
-    <p>Home JARVIS is the name of my private home-automation app. It connects my own Google Nest devices (a doorbell, a porch camera and a thermostat) to my own Home Assistant system through Google's Smart Device Management API. Day to day I control the thermostat through a local connection instead. It is not a public service, has no sign-ups or other users, and touches only my own devices.</p>
+    <p>Home JARVIS is the name of my private home-automation app. It connects my own Google Nest devices to my own Home Assistant system through Google's Smart Device Management API. Day to day, some devices are controlled through a local connection instead. It is not a public service, has no sign-ups or other users, and touches only my own devices.</p>
     <p><a href="privacy.html">Home JARVIS privacy policy</a></p>
   </section>
 
   <section class="card" aria-labelledby="cloud">
     <h2 id="cloud">What stays local, what uses the cloud</h2>
     <ul class="plain">
-      <li><strong>Local:</strong> speech recognition and spoken replies, a free built-in command matcher that is tried before Claude, and control of devices on my home network. A separate webcam relay on the PC serves a video stream (RTSP) only to the home server.</li>
-      <li><strong>Cloud:</strong> Nest doorbell and porch-camera events and live video come through Google's Smart Device Management API, and the cameras stream by WebRTC. Optional Claude answers go to Anthropic, only after a spoken yes.</li>
+      <li><strong>Local:</strong> speech recognition and spoken replies, a free built-in command matcher that is tried before Claude, and control of devices on my home network.</li>
+      <li><strong>Cloud:</strong> Nest device events and camera video come through Google's Smart Device Management API. Optional Claude answers go to Anthropic, only after a spoken yes.</li>
     </ul>
   </section>
 
@@ -48,10 +48,9 @@
     <h2 id="does">What it does</h2>
     <ul class="plain">
       <li>Speech in and out runs locally.</li>
-      <li>Planned: a hands-free "Hey Jarvis" wake word, which needs a room microphone I have not added yet.</li>
+      <li>A hands-free wake word is built and being tested.</li>
       <li>Conversation is free and local first. Paid Claude answers happen only after a spoken yes within 60 seconds. A live test billed exactly one call.</li>
-      <li>Doorbell rings arrive through Google's Smart Device Management API as one-tap phone alerts that open the live view, and the porch camera's motion events are received too.</li>
-      <li>A pet dashboard with three buttons, each asking for confirmation first. TV time turns the TV on with a video I picked and switches it off after a set time. Calm audio plays a calm radio station on a smart speaker for a set time. Stop all ends both. Scheduled versions are built but stay off until I choose times.</li>
+      <li>Device alerts arrive through Google's Smart Device Management API as one-tap phone alerts.</li>
     </ul>
   </section>
 
