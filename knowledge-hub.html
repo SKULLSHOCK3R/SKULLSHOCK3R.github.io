@@ -50,7 +50,7 @@
       <li><strong>Nightly rescan.</strong> The index refreshes by itself at 4:00 a.m. local time, and a manual rescan is available. The index stays on my PC and is never served to the network.</li>
       <li><strong>Explorer highlight.</strong> Opening a result selects the file in Windows File Explorer, even when that folder is already open.</li>
       <li><strong>Scripts cannot spend.</strong> A request from a local script (rather than the hub's own page on my PC or my paired phone) cannot confirm a paid offer or answer an inbox question. A script may decline an offer or let it lapse, but it may not spend.</li>
-      <li><strong>Wake word (phase 1, built and tested).</strong> Saying the wake word shows the hub's widget on my PC, with a chime. Nothing listens for a command afterwards. In this mode the listener opens no network connection, and its logs hold no audio, transcripts or replies. I am switching it on step by step.</li>
+      <li><strong>Wake word (phase 1: built and tested offline, not yet switched on).</strong> Once it is on, saying the wake word will show the hub's widget on my PC, with a chime. Nothing listens for a command afterwards. In this mode the listener opens no network connection, and its logs hold no audio, transcripts or replies. I am switching it on step by step.</li>
       <li>A link to my home-automation system that uses a separate, limited (non-admin) token and an allowlist of 15 readings and 5 actions. Anything else is refused. Each action needs a confirmation that works once and expires after 60 seconds.</li>
     </ul>
   </section>
@@ -62,7 +62,7 @@
       <li><strong>Observe only.</strong> It never clicks, types, signs in or sends cookies or credentials.</li>
       <li><strong>Public pages only.</strong> It refuses local and private addresses, raw IP addresses, file paths and local development servers. An independent review on 15 October 2026 probed 28 kinds of refusal.</li>
       <li><strong>One command at a time.</strong> Only a short allowlist of commands is accepted, and the final address is checked again after any redirect.</li>
-      <li><strong>Pinned tool.</strong> The inspection tool is version-pinned, the hub checks the installed version and integrity hash against the pins, and I installed the tool by hand after checking its registry signatures.</li>
+      <li><strong>Pinned tool.</strong> The inspection tool is version-pinned, the hub checks the installed version and integrity hash against the pins, and the tool was installed by hand (a pinned manual install, not by the app) after its registry signatures were checked.</li>
     </ul>
     <p>It belongs to the ethics layer described on the <a href="ai-workflows.html#shaka">AI Workflows page</a>.</p>
   </section>
