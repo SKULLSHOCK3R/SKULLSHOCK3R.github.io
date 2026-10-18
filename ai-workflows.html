@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Workflows - SKULLSHOCK3R</title>
-<meta name="description" content="One workflow across Claude, ChatGPT and Gemini: a shared rulebook, fresh-context stages, an independent final review and an ethics layer with a tool gate.">
+<meta name="description" content="One workflow across Claude, ChatGPT and Gemini: a shared rulebook, fresh-context stages where they help, an independent review where it matters and an ethics layer with a tool gate.">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
 <link rel="stylesheet" href="assets/site.css?v=6">
 <noscript><style>#stage { background: #070b17 url(assets/bg.gif) center bottom / cover no-repeat; image-rendering: pixelated; }</style></noscript>
@@ -36,7 +36,7 @@
     <figure>
       <svg class="flow-h" viewBox="0 0 440 150" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
         <title id="dg-title">Task flow</title>
-        <desc id="dg-desc">The coordinator hands work to planning, then production, then independent review. The reviewer reports back to the coordinator.</desc>
+        <desc id="dg-desc">When a task needs stages, the coordinator hands work to planning, then production, then independent review. The reviewer reports back to the coordinator.</desc>
         <defs>
           <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#6fe6ff"/>
@@ -61,7 +61,7 @@
       </svg>
       <svg class="flow-v" viewBox="0 0 300 330" role="img" aria-labelledby="dv-title dv-desc" xmlns="http://www.w3.org/2000/svg">
         <title id="dv-title">Task flow</title>
-        <desc id="dv-desc">The coordinator hands work to planning, then production, then independent review. The reviewer reports back to the coordinator.</desc>
+        <desc id="dv-desc">When a task needs stages, the coordinator hands work to planning, then production, then independent review. The reviewer reports back to the coordinator.</desc>
         <defs>
           <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#6fe6ff"/>
@@ -91,7 +91,7 @@
     <h2 id="how">How I built it</h2>
     <ul class="plain">
       <li><strong>My setup: startup checks.</strong> Two Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The other re-attaches a short persona summary to each message. In the starter kit, hooks are optional.</li>
-      <li><strong>My setup: staged work.</strong> Planning, production and independent final review run as separate fresh-context stages. As one example as of 17 October 2026, there are seven stage roles across four models. A strict quick-task test may skip planning, but never the review. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
+      <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As one example as of 17 October 2026, there are seven stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo: work for other people, money, secrets and live apps. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
       <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
       <li><strong>On-request research stage.</strong> Research stages can call Pythagoras only when I name it for a task, only from the top model tier, with a hard cap on calls. What it returns is data, and an independent review checks every run.</li>
       <li><strong>Usage guard.</strong> Staged work draws on a plan's usage allowance, so I check usage before launching a stage, ask first above about 70% of the 5-hour window or about 5% of the weekly allowance (my own example thresholds), cap retries at three, give each stage a time cap, and have a stage return what it has when blocked.</li>
@@ -109,7 +109,7 @@
           <tr><th scope="col">Model</th><th scope="col">Role</th><th scope="col">How it is used</th></tr>
         </thead>
         <tbody>
-          <tr><td>Claude (J.A.R.V.I.S.)</td><td>Coordinator and stage workers</td><td>Owns scope, approvals, briefs and the final result. Runs the planning, production and review stages. The final review is always a fresh Claude stage.</td></tr>
+          <tr><td>Claude (J.A.R.V.I.S.)</td><td>Coordinator and stage workers</td><td>Owns scope, approvals, briefs and the final result. Does most work directly and runs planning, production and review stages where they help. An independent review, always a fresh Claude stage, covers anything that leaves the machine or is hard to undo.</td></tr>
           <tr><td>ChatGPT / Codex (E.V.)</td><td>Second assistant; optional read-only stage</td><td>Works from the same rulebook. Used for a second opinion on a high-stakes plan, for overflow when the Claude allowance is stretched, or for a capability Claude lacks. Read-only; it never replaces the required review.</td></tr>
           <tr><td>Google Gemini</td><td>Free, read-only reader; optional stage</td><td>Reads image-heavy or very long documents. A small script uploads one file with a fixed prompt and saves the reply. It has no other access to my computer and cannot act. It uses a free-tier project with no billing, I approve it first, and nothing private goes to it.</td></tr>
         </tbody>
