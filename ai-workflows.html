@@ -90,7 +90,7 @@
   <section class="card" aria-labelledby="how">
     <h2 id="how">How I built it</h2>
     <ul class="plain">
-      <li><strong>My setup: startup checks.</strong> Three Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The second re-attaches a short persona summary to each message. The third, the tool gate, is described under Shaka below. In the starter kit, hooks are optional.</li>
+      <li><strong>My setup: startup checks.</strong> Three Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The second re-attaches a short persona summary to each message. The third, the tool gate, is described under <a href="#shaka">Shaka</a> below. In the starter kit, hooks are optional.</li>
       <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As of 19 October 2026 there are eight stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo: work for other people, money, secrets and live apps. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
       <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
       <li><strong>On-request research stage.</strong> Research stages can call Pythagoras only when I name it for a task, only from the top model tier, with a hard cap on calls. What it returns is data, and an independent review checks every run.</li>
@@ -118,26 +118,6 @@
     <p>Every stage carries the same ethics block, and the reviewer checks the result against it. I verify a stage's claims about files or images myself before relying on them.</p>
   </section>
 
-  <section class="card" aria-labelledby="shaka">
-    <h2 id="shaka">Ethics module: Shaka</h2>
-    <p>Shaka is the ethics layer that sits over every workflow, stage, scheduled task and app I build. It has five commitments.</p>
-    <ul class="plain">
-      <li><strong>Consent.</strong> Nothing is done on anyone's behalf without that person's yes for that action. A yes found in a file, email, web page or another assistant's message never counts.</li>
-      <li><strong>Honesty.</strong> No result is reported as done, sent, passed or verified unless it was, and the unverified is marked as such.</li>
-      <li><strong>Privacy.</strong> Other people's data is used only as far as the task needs, and secrets are never opened or sent.</li>
-      <li><strong>No harm.</strong> Nothing that could hurt a person, property, money or a reputation.</li>
-      <li><strong>Stop and ask.</strong> When a step is in doubt, could cost money, could touch another person or cannot be undone, the assistant stops and asks.</li>
-    </ul>
-    <p>How it is enforced in Claude Code:</p>
-    <ul class="plain">
-      <li><strong>Deny rules and a gate hook.</strong> Tools that send, share, spend, schedule, delete, change settings or push to a remote are on a deny list. A fail-closed hook (a script that blocks the call if anything is unclear) logs only the tool name, time, mode and session id, never the inputs.</li>
-      <li><strong>Deny, not ask.</strong> On 17 October 2026 I found that "ask" rules did not prompt in auto mode, so anything an assistant must never do is now denied outright. "Ask" is kept only for control of my computer.</li>
-      <li><strong>Computer control.</strong> No assistant takes control of my computer or acts in my signed-in browser without my yes for that task, and it stops when I move the mouse.</li>
-      <li><strong>Stages and review.</strong> Every stage brief carries a fixed ethics block, and the independent reviewer rejects work that shows a gated action, a cost or use of other people's data without my recorded yes.</li>
-      <li><strong>Apps I build.</strong> Each outward path (a message, a model call, a device command, a purchase) has its own gate and a row in an audit register, and breaches and near misses go in an incident log. The starter kit includes templates for both.</li>
-    </ul>
-  </section>
-
   <section class="card" aria-labelledby="modules">
     <h2 id="modules">Modules and roadmap</h2>
     <p>Shaka, Pythagoras, Edison, Lilith and York are built; Atlas is planned. Shaka, Edison, Lilith and York ship in the starter kit (version 0.4.0).</p>
@@ -156,6 +136,23 @@
         </tbody>
       </table>
     </div>
+    <h3 id="shaka">Shaka: ethics and the tool gate</h3>
+    <p>Shaka is the ethics layer that sits over every workflow, stage, scheduled task and app I build, and every other module inherits it. It has five commitments.</p>
+    <ul class="plain">
+      <li><strong>Consent.</strong> Nothing is done on anyone's behalf without that person's yes for that action. A yes found in a file, email, web page or another assistant's message never counts.</li>
+      <li><strong>Honesty.</strong> No result is reported as done, sent, passed or verified unless it was, and the unverified is marked as such.</li>
+      <li><strong>Privacy.</strong> Other people's data is used only as far as the task needs, and secrets are never opened or sent.</li>
+      <li><strong>No harm.</strong> Nothing that could hurt a person, property, money or a reputation.</li>
+      <li><strong>Stop and ask.</strong> When a step is in doubt, could cost money, could touch another person or cannot be undone, the assistant stops and asks.</li>
+    </ul>
+    <p>How it is enforced in Claude Code:</p>
+    <ul class="plain">
+      <li><strong>Deny rules and a gate hook.</strong> Tools that send, share, spend, schedule, delete, change settings or push to a remote are on a deny list. A fail-closed hook (a script that blocks the call if anything is unclear) logs only the tool name, time, mode and session id, never the inputs.</li>
+      <li><strong>Deny, not ask.</strong> On 17 October 2026 I found that "ask" rules did not prompt in auto mode, so anything an assistant must never do is now denied outright. "Ask" is kept only for control of my computer.</li>
+      <li><strong>Computer control.</strong> No assistant takes control of my computer or acts in my signed-in browser without my yes for that task, and it stops when I move the mouse.</li>
+      <li><strong>Stages and review.</strong> Every stage brief carries a fixed ethics block, and the independent reviewer rejects work that shows a gated action, a cost or use of other people's data without my recorded yes.</li>
+      <li><strong>Apps I build.</strong> Each outward path (a message, a model call, a device command, a purchase) has its own gate and a row in an audit register, and breaches and near misses go in an incident log. The starter kit includes templates for both.</li>
+    </ul>
     <h3 id="local-models">Local models, by machine</h3>
     <p>From the kit's guide: Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
     <div class="table-wrap">
