@@ -32,7 +32,7 @@
 
   <section class="card" aria-labelledby="does">
     <h2 id="does">What it does</h2>
-    <p>A single rulebook (AGENTS.md, with a byte-identical CLAUDE.md) governs both assistants, so the same rules apply whichever one picks up a task. Any non-trivial task is split into stages, each run as a new AI session that starts with no memory of the conversation (fresh context) and gets only a short written brief. The last stage is always a separate, independent review.</p>
+    <p>A single rulebook (AGENTS.md, with a byte-identical CLAUDE.md) governs both assistants, so the same rules apply whichever one picks up a task. When a task benefits from it, the work is split into stages, each run as a new AI session that starts with no memory of the conversation (fresh context) and gets only a short written brief. Work that leaves my machine or is hard to undo ends with a separate, independent review.</p>
     <figure>
       <svg class="flow-h" viewBox="0 0 440 150" role="img" aria-labelledby="dg-title dg-desc" xmlns="http://www.w3.org/2000/svg">
         <title id="dg-title">Task flow</title>
@@ -90,8 +90,8 @@
   <section class="card" aria-labelledby="how">
     <h2 id="how">How I built it</h2>
     <ul class="plain">
-      <li><strong>My setup: startup checks.</strong> Two Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The other re-attaches a short persona summary to each message. In the starter kit, hooks are optional.</li>
-      <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As one example as of 17 October 2026, there are seven stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo: work for other people, money, secrets and live apps. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
+      <li><strong>My setup: startup checks.</strong> Three Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The second re-attaches a short persona summary to each message. The third, the tool gate, is described under Shaka below. In the starter kit, hooks are optional.</li>
+      <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As of 19 October 2026 there are eight stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo: work for other people, money, secrets and live apps. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
       <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
       <li><strong>On-request research stage.</strong> Research stages can call Pythagoras only when I name it for a task, only from the top model tier, with a hard cap on calls. What it returns is data, and an independent review checks every run.</li>
       <li><strong>Usage guard.</strong> Staged work draws on a plan's usage allowance, so I check usage before launching a stage, ask first above about 70% of the 5-hour window or about 5% of the weekly allowance (my own example thresholds), cap retries at three, give each stage a time cap, and have a stage return what it has when blocked.</li>
@@ -157,11 +157,11 @@
       </table>
     </div>
     <h3 id="local-models">Local models, by machine</h3>
-    <p>Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
+    <p>From the kit's guide: Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th scope="col">Your machine</th><th scope="col">Atlas (coding and drafts)</th><th scope="col">Local reader (images and pages)</th></tr>
+          <tr><th scope="col">Machine</th><th scope="col">Atlas (coding and drafts)</th><th scope="col">Local reader (images and pages)</th></tr>
         </thead>
         <tbody>
           <tr><td>No NVIDIA GPU, or under 6 GB of video memory</td><td>Skip it; use the cloud stages</td><td>Skip it; use the optional Gemini reader</td></tr>
@@ -173,7 +173,7 @@
       </table>
     </div>
     <p>Each download is treated as an install that the user approves by name, the model server listens only on the local machine, and when a local model's output gets a final cloud check, an item counts as done only when that check succeeds; a failed check stops the run.</p>
-    <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders.</p>
+    <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders. J.A.R.V.I.S. and E.V. are nicknames only; this site is not affiliated with or endorsed by Marvel, Disney, Sony, Anthropic, OpenAI or Google.</p>
   </section>
   <p class="back"><a href="index.html#projects">Back to projects</a></p>
 </main>
