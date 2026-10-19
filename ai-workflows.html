@@ -140,7 +140,7 @@
 
   <section class="card" aria-labelledby="modules">
     <h2 id="modules">Modules and roadmap</h2>
-    <p>Shaka and Pythagoras are built. The rest are planned and not built yet.</p>
+    <p>Shaka, Pythagoras, Edison, Lilith and York are built; Atlas is planned. Shaka, Edison, Lilith and York ship in the starter kit (version 0.4.0).</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -149,13 +149,30 @@
         <tbody>
           <tr><td>Shaka</td><td>Ethics module and tool gate</td><td>Built (in the starter kit)</td></tr>
           <tr><td>Pythagoras</td><td>Observe-only research bay for public web pages (see the <a href="knowledge-hub.html#pythagoras">Knowledge Hub page</a>)</td><td>Built; an on-request research stage for the top model tier (private)</td></tr>
-          <tr><td>Edison</td><td>Planning</td><td>Planned, not built</td></tr>
-          <tr><td>Lilith</td><td>Red-team testing of the gates and workflows</td><td>Planned, not built</td></tr>
-          <tr><td>Atlas</td><td>Heavy builds</td><td>Planned, not built</td></tr>
-          <tr><td>York</td><td>Resource watch, read-only</td><td>Planned, not built</td></tr>
+          <tr><td>Edison</td><td>Planning stage: every plan states expected usage, an ethics check, the approvals it needs and how to roll back. Falls back to your existing planner model if the top tier is unavailable</td><td>Built (in the starter kit)</td></tr>
+          <tr><td>Lilith</td><td>Red-team tests of the tool gate and rule files, using synthetic input only; it reports gaps and never fixes them</td><td>Built (in the starter kit)</td></tr>
+          <tr><td>York</td><td>Read-only resource watch: GPU, a local model server, disk space and running jobs</td><td>Built (in the starter kit)</td></tr>
+          <tr><td>Atlas</td><td>Heavy builds from an Edison plan, with Lilith run first; can hand routine coding to a local model</td><td>Planned</td></tr>
         </tbody>
       </table>
     </div>
+    <h3 id="local-models">Local models, by machine</h3>
+    <p>Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Your machine</th><th scope="col">Atlas (coding and drafts)</th><th scope="col">Local reader (images and pages)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>No NVIDIA GPU, or under 6 GB of video memory</td><td>Skip it; use the cloud stages</td><td>Skip it; use the optional Gemini reader</td></tr>
+          <tr><td>6 to 8 GB</td><td>qwen3:8b (about 5 GB), small edits only</td><td>gemma3:4b (about 3.3 GB)</td></tr>
+          <tr><td>12 to 16 GB</td><td>qwen3:14b (about 9 GB) or gpt-oss:20b (about 14 GB)</td><td>gemma3:12b (about 8 GB)</td></tr>
+          <tr><td>24 GB</td><td>qwen3.6:27b (18 to 19 GB) or qwen3-coder:30b (about 19 GB, faster)</td><td>gemma3:27b (about 17 GB)</td></tr>
+          <tr><td>24 GB plus 64 GB or more of system memory</td><td>Also 100B-class mixture-of-experts models such as gpt-oss:120b (about 65 GB), much slower</td><td>As above</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Each download is treated as an install that the user approves by name, the model server listens only on the local machine, and a local reader works strictly in order: an item counts as read only when its final pass succeeds, and a failed final pass stops the run.</p>
     <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders.</p>
   </section>
   <p class="back"><a href="index.html#projects">Back to projects</a></p>
