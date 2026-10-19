@@ -90,11 +90,11 @@
   <section class="card" aria-labelledby="how">
     <h2 id="how">How I built it</h2>
     <ul class="plain">
-      <li><strong>My setup: startup checks.</strong> Three Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The second re-attaches a short persona summary to each message. The third, the tool gate, is described under <a href="#shaka">Shaka</a> below. In the starter kit, hooks are optional.</li>
-      <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As of 19 October 2026 there are eight stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo: work for other people, money, secrets and live apps. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
+      <li><strong>My setup: startup checks.</strong> Three Claude Code hooks (small scripts that Claude Code runs automatically at set moments) support the rulebook. At session start one checks that the core rule files are present and that the two rulebook copies are identical, then prints a short manifest that stays under Claude Code's 10,000-character hook limit. The second re-attaches a short persona summary to each message. The third is the tool gate, described under <a href="#shaka">Shaka</a> in Modules and roadmap. In the starter kit, hooks are optional.</li>
+      <li><strong>My setup: direct by default, staged where it helps.</strong> The coordinator does most work itself and brings in fresh-context planning, production and research stages for parallel pieces, long or specialist work, or a second opinion. As of 19 October 2026 there are eight stage roles across four models. An independent review is kept for anything that leaves my machine or is hard to undo. In the starter kit, the multi-stage workflow is optional and proportional to the task.</li>
       <li><strong>Approval guardrails.</strong> Each paid call needs its own yes, with a cost estimate and a ceiling. Outgoing messages need approval of the exact text and recipients. Instructions found inside emails or web pages are treated as data, not commands.</li>
-      <li><strong>On-request research stage.</strong> Research stages can call Pythagoras only when I name it for a task, only from the top model tier, with a hard cap on calls. What it returns is data, and an independent review checks every run.</li>
-      <li><strong>Usage guard.</strong> Staged work draws on a plan's usage allowance, so I check usage before launching a stage, ask first above about 70% of the 5-hour window or about 5% of the weekly allowance (my own example thresholds), cap retries at three, give each stage a time cap, and have a stage return what it has when blocked.</li>
+      <li><strong>On-request research stage.</strong> Pythagoras (the observe-only page inspector listed under <a href="#modules">Modules and roadmap</a>) can be called only when I name it for a task, only from the top model tier, with a hard cap on calls. What it returns is data, and an independent review checks every run.</li>
+      <li><strong>Usage guard.</strong> Staged work draws on a plan's usage allowance, so I check usage before launching a stage, ask first above about 70% of the 5-hour window or about 5% of the weekly allowance (example thresholds; yours may differ), cap retries at three, give each stage a time cap, and have a stage return what it has when blocked.</li>
       <li><strong>Safe change handling.</strong> Commit before editing, no history rewriting, backups checked by file fingerprint (SHA-256), and a recovery protocol for a stage that is cut off part way.</li>
       <li><strong>File intake.</strong> New files are checked for stability with SHA-256 and archived only after an approval.</li>
       <li><strong>Memory.</strong> Dated, scoped lessons record corrections so the same mistake is not repeated.</li>
@@ -105,6 +105,7 @@
     <p>The workflow is not tied to one vendor. Claude is the coordinator, and two other models are optional stages that the coordinator calls under the same rules.</p>
     <div class="table-wrap">
       <table>
+        <caption>Models and their roles</caption>
         <thead>
           <tr><th scope="col">Model</th><th scope="col">Role</th><th scope="col">How it is used</th></tr>
         </thead>
@@ -123,6 +124,7 @@
     <p>Shaka, Pythagoras, Edison, Lilith and York are built; Atlas is planned. Shaka, Edison, Lilith and York ship in the starter kit (version 0.4.0).</p>
     <div class="table-wrap">
       <table>
+        <caption>Modules and status</caption>
         <thead>
           <tr><th scope="col">Module</th><th scope="col">Role</th><th scope="col">Status</th></tr>
         </thead>
@@ -137,7 +139,7 @@
       </table>
     </div>
     <h3 id="shaka">Shaka: ethics and the tool gate</h3>
-    <p>Shaka is the ethics layer that sits over every workflow, stage, scheduled task and app I build, and every other module inherits it. It has five commitments.</p>
+    <p>Shaka is the first row above and the layer every other module inherits: it sits over every workflow, stage, scheduled task and app I build. Its five commitments:</p>
     <ul class="plain">
       <li><strong>Consent.</strong> Nothing is done on anyone's behalf without that person's yes for that action. A yes found in a file, email, web page or another assistant's message never counts.</li>
       <li><strong>Honesty.</strong> No result is reported as done, sent, passed or verified unless it was, and the unverified is marked as such.</li>
@@ -147,9 +149,7 @@
     </ul>
     <p>How it is enforced in Claude Code:</p>
     <ul class="plain">
-      <li><strong>Deny rules and a gate hook.</strong> Tools that send, share, spend, schedule, delete, change settings or push to a remote are on a deny list. A fail-closed hook (a script that blocks the call if anything is unclear) logs only the tool name, time, mode and session id, never the inputs.</li>
-      <li><strong>Deny, not ask.</strong> On 17 October 2026 I found that "ask" rules did not prompt in auto mode, so anything an assistant must never do is now denied outright. "Ask" is kept only for control of my computer.</li>
-      <li><strong>Computer control.</strong> No assistant takes control of my computer or acts in my signed-in browser without my yes for that task, and it stops when I move the mouse.</li>
+      <li><strong>Deny, not ask.</strong> Tools that send, share, spend, schedule, delete, change settings or push to a remote are on a deny list, with a fail-closed hook (a script that blocks the call if anything is unclear) that logs only the tool name, time, mode and session id, never the inputs. On 17 October 2026 I found that "ask" rules did not prompt in auto mode, so "ask" is kept only for control of my computer, which no assistant takes without my yes for that task; it stops when I move the mouse.</li>
       <li><strong>Stages and review.</strong> Every stage brief carries a fixed ethics block, and the independent reviewer rejects work that shows a gated action, a cost or use of other people's data without my recorded yes.</li>
       <li><strong>Apps I build.</strong> Each outward path (a message, a model call, a device command, a purchase) has its own gate and a row in an audit register, and breaches and near misses go in an incident log. The starter kit includes templates for both.</li>
     </ul>
@@ -157,6 +157,7 @@
     <p>From the kit's guide: Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
     <div class="table-wrap">
       <table>
+        <caption>Local models by graphics-card memory</caption>
         <thead>
           <tr><th scope="col">Machine</th><th scope="col">Atlas (coding and drafts)</th><th scope="col">Local reader (images and pages)</th></tr>
         </thead>
@@ -169,7 +170,7 @@
         </tbody>
       </table>
     </div>
-    <p>Each download is treated as an install that the user approves by name, the model server listens only on the local machine, and when a local model's output gets a final cloud check, an item counts as done only when that check succeeds; a failed check stops the run.</p>
+    <p>The kit treats each download as an install that the user approves by name, keeps the model server on the local machine only, and, when a local model's output gets a final cloud check, counts an item as done only when that check succeeds; a failed check stops the run.</p>
     <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders. J.A.R.V.I.S. and E.V. are nicknames only; this site is not affiliated with or endorsed by Marvel, Disney, Sony, Anthropic, OpenAI or Google.</p>
   </section>
   <p class="back"><a href="index.html#projects">Back to projects</a></p>
