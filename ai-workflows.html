@@ -165,14 +165,14 @@
         </thead>
         <tbody>
           <tr><td>No NVIDIA GPU, or under 6 GB of video memory</td><td>Skip it; use the cloud stages</td><td>Skip it; use the optional Gemini reader</td></tr>
-          <tr><td>6 to 8 GB</td><td>qwen3:8b (about 5 GB), small edits only</td><td>gemma3:4b (about 3.3 GB)</td></tr>
+          <tr><td>6 to 8 GB</td><td>qwen3:8b (about 5 GB), small edits only</td><td>gemma3:4b (about 3.4 GB)</td></tr>
           <tr><td>12 to 16 GB</td><td>qwen3:14b (about 9 GB) or gpt-oss:20b (about 14 GB)</td><td>gemma3:12b (about 8 GB)</td></tr>
           <tr><td>24 GB</td><td>qwen3.6:27b (18 to 19 GB) or qwen3-coder:30b (about 19 GB, faster)</td><td>gemma3:27b (about 17 GB)</td></tr>
           <tr><td>24 GB plus 64 GB or more of system memory</td><td>Also 100B-class mixture-of-experts models such as gpt-oss:120b (about 65 GB), much slower</td><td>As above</td></tr>
         </tbody>
       </table>
     </div>
-    <p>Each download is treated as an install that the user approves by name, the model server listens only on the local machine, and a local reader works strictly in order: an item counts as read only when its final pass succeeds, and a failed final pass stops the run.</p>
+    <p>Each download is treated as an install that the user approves by name, the model server listens only on the local machine, and when a local model's output gets a final cloud check, an item counts as done only when that check succeeds; a failed check stops the run.</p>
     <p>The module names (Shaka, Pythagoras, Edison, Lilith, Atlas, York) are inspired by the manga One Piece by Eiichiro Oda. This project is not affiliated with or endorsed by its creator or rights holders.</p>
   </section>
   <p class="back"><a href="index.html#projects">Back to projects</a></p>
