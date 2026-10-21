@@ -121,7 +121,7 @@
 
   <section class="card" aria-labelledby="modules">
     <h2 id="modules">Modules and roadmap</h2>
-    <p>Shaka, Pythagoras, Edison, Lilith and York are built; Atlas is planned. Shaka, Edison, Lilith and York ship in the starter kit (version 0.4.0).</p>
+    <p>All six modules are built. Shaka, Edison, Lilith and York ship in the starter kit (version 0.4.1), and its local models guide shows how to set up an Atlas of your own.</p>
     <div class="table-wrap">
       <table>
         <caption>Modules and status</caption>
@@ -134,7 +134,7 @@
           <tr><td>Edison</td><td>Planning stage: every plan states expected usage, an ethics check, the approvals it needs and how to roll back. Falls back to your existing planner model if the top tier is unavailable</td><td>Built (in the starter kit)</td></tr>
           <tr><td>Lilith</td><td>Red-team tests of the tool gate and rule files, using synthetic input only; it reports gaps and never fixes them</td><td>Built (in the starter kit)</td></tr>
           <tr><td>York</td><td>Read-only resource watch: GPU, a local model server, disk space and running jobs</td><td>Built (in the starter kit)</td></tr>
-          <tr><td>Atlas</td><td>Heavy builds from an Edison plan, with Lilith run first; can hand routine coding to a local model</td><td>Planned</td></tr>
+          <tr><td>Atlas</td><td>Local heavy lifting: the jobs that run on my own graphics card instead of a cloud stage (local models for drafts and routine coding, a local reader for images and scanned pages, an image upscaler), so heavy work costs no cloud usage. Top-tier builds stay a separate cloud stage</td><td>Built (private; set up your own with the <a href="#local-models">local models guide</a>)</td></tr>
         </tbody>
       </table>
     </div>
@@ -154,12 +154,12 @@
       <li><strong>Apps I build.</strong> Each outward path (a message, a model call, a device command, a purchase) has its own gate and a row in an audit register, and breaches and near misses go in an incident log. The starter kit includes templates for both.</li>
     </ul>
     <h3 id="local-models">Local models, by machine</h3>
-    <p>From the kit's guide: Atlas and a local image or page reader can run on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
+    <p>From the kit's guide: Atlas, a local helper for drafts and routine coding plus a local image or page reader, runs on your own computer instead of a cloud stage. They are free to run but slower and less capable than the top cloud tier, so planning, hard builds and final reviews stay in the cloud. The limit is mostly the graphics card's memory. Sizes are approximate 4-bit downloads listed by Ollama in October 2026.</p>
     <div class="table-wrap">
       <table>
         <caption>Local models by graphics-card memory</caption>
         <thead>
-          <tr><th scope="col">Machine</th><th scope="col">Atlas (coding and drafts)</th><th scope="col">Local reader (images and pages)</th></tr>
+          <tr><th scope="col">Machine</th><th scope="col">Atlas: coding and drafts</th><th scope="col">Atlas: local reader (images and pages)</th></tr>
         </thead>
         <tbody>
           <tr><td>No NVIDIA GPU, or under 6 GB of video memory</td><td>Skip it; use the cloud stages</td><td>Skip it; use the optional Gemini reader</td></tr>
