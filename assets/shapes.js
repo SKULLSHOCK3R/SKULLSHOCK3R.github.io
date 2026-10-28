@@ -1,5 +1,5 @@
 /* Particle sculptures for the closing chamber. Each shape is a flat white-on-transparent drawing (Luffy from
-   assets/luffy-mask.png, cut from Robin's silhouette picture after art by @xariis_f; the Straw Hat Jolly Roger and the
+   assets/luffy-mask.png, cut from Robin's silhouette picture; the Straw Hat Jolly Roger and the
    envelope drawn here), sampled into n grains with volume from a chamfer distance transform (the "inflate": grains
    sit on a front and back surface whose depth grows with the distance to the outline, plus a thinner filling).
    Each grain carries a baked shade from the inflated surface's normal, so the sculpture reads as lit. Output per

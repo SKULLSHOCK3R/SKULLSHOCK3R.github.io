@@ -1,4 +1,4 @@
-/* The two AI cores (J.A.R.V.I.S. gold, E.V. purple): the PUNK RECORDS CORE hologram as GPU lines. A sphere of broken
+/* The two AI cores (J.A.R.V.I.S. gold, E.V. purple): a CORE hologram as GPU lines. A sphere of broken
    filaments (latitude bands, meridians, tilted circles and a knot at the centre) in four layers, each turning on its
    own axis; every filament traces on, holds, fades from its tail and rests, timed per arc in the vertex shader.
    Drawn additively (bloom gives the glow) with a soft centre sprite and a few orbiting motes. One draw call per core
