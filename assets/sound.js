@@ -26,7 +26,9 @@ export function createSound(button) {
   try { want = localStorage.getItem(KEY) === 'on'; } catch (e) { /* storage blocked: start off */ }
   const S = {};
   const prev = { flash: 0, collapse: 0, toEnd: 0, coreReveal: 0 };
-  let arrivedAtAc = -10;   // audio-clock time of the cores' arrival chime
+  let swellUntil = -10;   // audio-clock time the cores' arrival swell ends (touch screens)
+  // a touch screen with no hovering pointer (a phone or tablet)
+  const TOUCH = !!(window.matchMedia && matchMedia('(hover: none)').matches);
   const music = { next: 0, chordAt: 0, chord: 0, note: 67, lift: 0 };
 
   /* ---- building blocks ---- */
@@ -136,10 +138,12 @@ export function createSound(button) {
       return { o, k };
     });
     chain(S.voiceF, S.voice, S.music);
-    // the two cores: a quiet sine glow each, J.A.R.V.I.S. on G (left), E.V. on C (right)
+    // the two cores: a quiet sine glow each, J.A.R.V.I.S. on G (left), E.V. on C (right); an octave up on touch screens,
+    // whose small speakers barely sound the low G and C (Robin, 2026-10-28: the hum was missing on his phone)
+    const lift = TOUCH ? 12 : 0;
     S.core = [[55, 67], [60, 72]].map((ms, i) => {
       const g = gain(0), trem = gain(0.8);
-      ms.forEach((m, k) => osc('sine', hz(m) * (1 + (i ? 0.0015 : -0.0015)), k ? 0.35 : 0.6, trem));
+      ms.forEach((m, k) => osc('sine', hz(m + lift) * (1 + (i ? 0.0015 : -0.0015)), k ? 0.35 : 0.6, trem));
       const l = ac.createOscillator(); l.frequency.value = i ? 0.23 : 0.17; l.connect(gainTo(0.2, trem.gain)); l.start();
       chain(trem, g, pan(i ? 0.4 : -0.4, S.bus));
       g.connect(gainTo(0.4, S.verbIn));
@@ -200,8 +204,8 @@ export function createSound(button) {
     s.start(t, Math.random() * 2, 0.08);
   }
   const corePitch = [[67, 74, 79], [72, 76, 79]];   // G and C, as their glows
-  function chime(i, soft, delay) {
-    const now = ac.currentTime + (delay || 0);
+  function chime(i, soft) {
+    const now = ac.currentTime;
     if (soft) piano(corePitch[i][0] + 12, now, 0.14, i ? 0.4 : -0.4);
     else arpeggio(corePitch[i], now, 0.16, 0.2);
   }
@@ -266,7 +270,7 @@ export function createSound(button) {
      s: t (timeline 0..4), dt, time, vel (timeline speed), flash and flashScale (lightning), globeLight, globeShown,
      collapse, toEnd, coreReveal, end (the chamber's presence), loopWhite */
   function update(s) {
-    if (!on || !ac) { prev.coreReveal = s.coreReveal; return; }   // so turning sound on at the cores does not chime
+    if (!on || !ac) { prev.coreReveal = s.coreReveal; return; }   // so turning sound on at the cores does not swell
     score(s);
     const rain = (1 - 0.35 * smooth(0.5, 1.5, s.t)) * (1 - smooth(3.3, 3.6, s.t)) * (1 - s.loopWhite);
     // lightning: a distant roll follows the flash
@@ -279,10 +283,9 @@ export function createSound(button) {
     if (rainAcc > 3) rainAcc = 0;
     if (prev.collapse < 0.6 && s.collapse >= 0.6) settle();
     prev.collapse = s.collapse;
-    // the cores answer as the scroll arrives at them, J.A.R.V.I.S. then E.V. (Robin, 2026-10-28: silent on his phone):
-    // on a computer it came only from the resting mouse passing over a core, and a phone has no hover, so the arrival
-    // itself now plays it on every device
-    if (prev.coreReveal < 0.8 && s.coreReveal >= 0.8) { chime(0, false); chime(1, false, 0.55); arrivedAtAc = ac.currentTime; }
+    // on a touch screen nothing hovers, so the cores' hum swells as the scroll arrives at them, as it does under a
+    // computer's resting mouse, and eases back after about 3 s (Robin, 2026-10-28: the same hum, not extra chimes)
+    if (TOUCH && prev.coreReveal < 0.8 && s.coreReveal >= 0.8) swellUntil = ac.currentTime + 3;
     prev.coreReveal = s.coreReveal;
     RINGS.forEach((r, i) => { if ((prev.toEnd - r) * (s.toEnd - r) < 0) ringPass(i, s.toEnd > prev.toEnd ? 1 : -1); });
     prev.toEnd = s.toEnd;
@@ -304,7 +307,8 @@ export function createSound(button) {
     // the pad: always there, a touch warmer as the globe shines and in the chamber
     set(S.pad.gain, 0.05 + 0.03 * g * L + 0.02 * s.end, 0.6);
     set(S.padF.frequency, 420 + 500 * g * L + 400 * s.end, 0.6);
-    S.core.forEach((c) => set(c.g.gain, s.coreReveal * (c.hot ? 0.05 : 0.022), 0.3));
+    const swelling = ac.currentTime < swellUntil;
+    S.core.forEach((c) => set(c.g.gain, s.coreReveal * (c.hot || swelling ? 0.05 : 0.022), swelling ? 0.6 : 0.3));
     const gate = s.toEnd > 0.12 && s.toEnd < 0.64 ? Math.sin(Math.PI * (s.toEnd - 0.12) / 0.52) : 0;
     set(S.rise.gain, 0.06 * gate * (0.4 + 0.6 * speed), 0.25);
     set(S.riseF.frequency, 250 + 900 * clamp((s.toEnd - 0.12) / 0.52, 0, 1), 0.25);
@@ -313,8 +317,7 @@ export function createSound(button) {
 
   return {
     update,
-    // (no hover note within 2 s of the arrival chime, so a mouse resting where a core lands does not double it)
-    hover(i) { if (on && ac && S.core[i] && !S.core[i].hot && ac.currentTime - arrivedAtAc > 2) chime(i, true); if (ac) S.core[i].hot = true; },
+    hover(i) { if (on && ac && S.core[i] && !S.core[i].hot) chime(i, true); if (ac) S.core[i].hot = true; },
     unhover(i) { if (ac && S.core[i]) S.core[i].hot = false; },
     sheet(open, key) {
       if (!on || !ac) return;

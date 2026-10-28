@@ -15,7 +15,7 @@ import { createCores } from './cores.js?v=8';
 import { createEnding, ITEMS } from './ending.js?v=13';
 import { createRingGate } from './ringgate.js?v=12';
 import { stillSvg } from './figures.js?v=15';
-import { createSound } from './sound.js?v=7';
+import { createSound } from './sound.js?v=8';
 
 const html = document.documentElement;
 html.setAttribute('data-app', '1');   // the module ran: index.html's watchdog leaves the scene layout alone
@@ -346,6 +346,9 @@ async function main() {
   }, { passive: true });
   document.addEventListener('pointerleave', () => { pointer.active = false; });
   addEventListener('pointerup', (e) => { if (e.pointerType === 'touch') pointer.active = false; });
+  // a touch that turns into a scroll ends in pointercancel, not pointerup: without this the touch point stayed
+  // "active" where the finger first landed, and a core scrolling under it chimed as if hovered (2026-10-28)
+  addEventListener('pointercancel', (e) => { if (e.pointerType === 'touch') pointer.active = false; });
   // every finger on the screen, for the globe (Robin, 2026-10-28: several fingers at once on phones).
   // Touch events, not pointer events: a phone cancels a pointer as soon as the touch starts scrolling the page, while
   // touchmove keeps coming, so the blocks follow each finger through a swipe too. Up to four, in stable slots.
