@@ -138,12 +138,15 @@ export function createSound(button) {
       return { o, k };
     });
     chain(S.voiceF, S.voice, S.music);
-    // the two cores: a quiet sine glow each, J.A.R.V.I.S. on G (left), E.V. on C (right); an octave up on touch screens,
-    // whose small speakers barely sound the low G and C (Robin, 2026-10-28: the hum was missing on his phone)
-    const lift = TOUCH ? 12 : 0;
+    // the two cores: a quiet sine glow each, J.A.R.V.I.S. on G (left), E.V. on C (right). Touch screens keep the same
+    // notes and add a few soft overtones of the low one (3rd to 5th): a phone's small speaker barely sounds the low G
+    // and C themselves, but plays the overtones, and the ear fills the low note back in (Robin, 2026-10-28: an
+    // octave-up hum did not sound like the computer's)
+    const OVER = TOUCH ? [[3, 0.2], [4, 0.12], [5, 0.07]] : [];
     S.core = [[55, 67], [60, 72]].map((ms, i) => {
-      const g = gain(0), trem = gain(0.8);
-      ms.forEach((m, k) => osc('sine', hz(m + lift) * (1 + (i ? 0.0015 : -0.0015)), k ? 0.35 : 0.6, trem));
+      const g = gain(0), trem = gain(0.8), d = 1 + (i ? 0.0015 : -0.0015);
+      ms.forEach((m, k) => osc('sine', hz(m) * d, k ? 0.35 : 0.6, trem));
+      OVER.forEach(([h, lv]) => osc('sine', hz(ms[0]) * h * d, lv, trem));
       const l = ac.createOscillator(); l.frequency.value = i ? 0.23 : 0.17; l.connect(gainTo(0.2, trem.gain)); l.start();
       chain(trem, g, pan(i ? 0.4 : -0.4, S.bus));
       g.connect(gainTo(0.4, S.verbIn));
