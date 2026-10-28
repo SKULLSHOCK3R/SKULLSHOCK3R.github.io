@@ -9,7 +9,7 @@
 <!-- Plate slot: once a photoreal still or clip is in place, name it here (assets/plates/hero.jpg or assets/plates/hero.mp4) and the opening uses it under the storm effects. -->
 <meta name="hero-plate" content="assets/plates/hero.jpg">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/storm.css?v=9">
+<link rel="stylesheet" href="assets/storm.css?v=13">
 <script>
 /* Picks the scene layout before first paint when WebGL2 is likely and motion is allowed; assets/app.js confirms it or falls back to the plain page. */
 (function () { try { if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'WebGL2RenderingContext' in window) document.documentElement.classList.add('gl'); } catch (e) {} })();
@@ -24,6 +24,8 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
 
 <!-- The whole scene (storm, globe of blocks, the two cores, the particle chamber) draws on this one canvas. -->
 <canvas id="stage" aria-hidden="true"></canvas>
+<!-- The preloader: shown only with the scene layout; app.js counts the models and textures in and lifts it. -->
+<div id="loader" aria-hidden="true"><p><span class="pct">0</span>%</p><p class="what">Building the world</p><span class="bar"></span></div>
 <svg id="hudlines" aria-hidden="true"></svg>
 <div class="still" aria-hidden="true"></div>
 
@@ -111,6 +113,6 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
   </div>
 </div>
 
-<script type="module" src="assets/app.js?v=103" onerror="document.documentElement.classList.remove('gl')"></script>
+<script type="module" src="assets/app.js?v=106" onerror="document.documentElement.classList.remove('gl')"></script>
 </body>
 </html>

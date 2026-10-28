@@ -25,7 +25,8 @@ export function createSound(button) {
   let ac = null, on = false, want = false, lastSet = 0, rainAcc = 0;
   try { want = localStorage.getItem(KEY) === 'on'; } catch (e) { /* storage blocked: start off */ }
   const S = {};
-  const prev = { flash: 0, collapse: 0, toEnd: 0 };
+  const prev = { flash: 0, collapse: 0, toEnd: 0, coreReveal: 0 };
+  let arrivedAtAc = -10;   // audio-clock time of the cores' arrival chime
   const music = { next: 0, chordAt: 0, chord: 0, note: 67, lift: 0 };
 
   /* ---- building blocks ---- */
@@ -199,8 +200,8 @@ export function createSound(button) {
     s.start(t, Math.random() * 2, 0.08);
   }
   const corePitch = [[67, 74, 79], [72, 76, 79]];   // G and C, as their glows
-  function chime(i, soft) {
-    const now = ac.currentTime;
+  function chime(i, soft, delay) {
+    const now = ac.currentTime + (delay || 0);
     if (soft) piano(corePitch[i][0] + 12, now, 0.14, i ? 0.4 : -0.4);
     else arpeggio(corePitch[i], now, 0.16, 0.2);
   }
@@ -265,7 +266,7 @@ export function createSound(button) {
      s: t (timeline 0..4), dt, time, vel (timeline speed), flash and flashScale (lightning), globeLight, globeShown,
      collapse, toEnd, coreReveal, end (the chamber's presence), loopWhite */
   function update(s) {
-    if (!on || !ac) return;
+    if (!on || !ac) { prev.coreReveal = s.coreReveal; return; }   // so turning sound on at the cores does not chime
     score(s);
     const rain = (1 - 0.35 * smooth(0.5, 1.5, s.t)) * (1 - smooth(3.3, 3.6, s.t)) * (1 - s.loopWhite);
     // lightning: a distant roll follows the flash
@@ -278,6 +279,11 @@ export function createSound(button) {
     if (rainAcc > 3) rainAcc = 0;
     if (prev.collapse < 0.6 && s.collapse >= 0.6) settle();
     prev.collapse = s.collapse;
+    // the cores answer as the scroll arrives at them, J.A.R.V.I.S. then E.V. (Robin, 2026-10-28: silent on his phone):
+    // on a computer it came only from the resting mouse passing over a core, and a phone has no hover, so the arrival
+    // itself now plays it on every device
+    if (prev.coreReveal < 0.8 && s.coreReveal >= 0.8) { chime(0, false); chime(1, false, 0.55); arrivedAtAc = ac.currentTime; }
+    prev.coreReveal = s.coreReveal;
     RINGS.forEach((r, i) => { if ((prev.toEnd - r) * (s.toEnd - r) < 0) ringPass(i, s.toEnd > prev.toEnd ? 1 : -1); });
     prev.toEnd = s.toEnd;
 
@@ -307,7 +313,8 @@ export function createSound(button) {
 
   return {
     update,
-    hover(i) { if (on && ac && S.core[i] && !S.core[i].hot) chime(i, true); if (ac) S.core[i].hot = true; },
+    // (no hover note within 2 s of the arrival chime, so a mouse resting where a core lands does not double it)
+    hover(i) { if (on && ac && S.core[i] && !S.core[i].hot && ac.currentTime - arrivedAtAc > 2) chime(i, true); if (ac) S.core[i].hot = true; },
     unhover(i) { if (ac && S.core[i]) S.core[i].hot = false; },
     sheet(open, key) {
       if (!on || !ac) return;

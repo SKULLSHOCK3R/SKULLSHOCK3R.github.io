@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createPost } from './post.js?v=3';
 import { createOpening } from './opening.js?v=35';
-import { createGlobe } from './globe.js?v=38';
+import { createGlobe } from './globe.js?v=40';
 import { createCores } from './cores.js?v=8';
 import { createEnding, ITEMS } from './ending.js?v=13';
 import { createRingGate } from './ringgate.js?v=12';
 import { stillSvg } from './figures.js?v=15';
-import { createSound } from './sound.js?v=5';
+import { createSound } from './sound.js?v=7';
 
 const html = document.documentElement;
 html.setAttribute('data-app', '1');   // the module ran: index.html's watchdog leaves the scene layout alone
@@ -121,11 +121,36 @@ async function main() {
 
   const post = createPost(renderer, scene, camera);
   post.grade.uFade.value = 0;
+  // the preloader (Robin, 2026-10-28, after igloo.inc's loading screen): every model and texture goes through three's
+  // default loading manager, so its count drives the percentage; the cover lifts once they are all in and the first
+  // frames are drawn, so nothing pops in under the visitor
+  const cover = $('#loader'), pct = cover && $('.pct', cover);
+  const load = { loaded: 0, total: 0, shown: 0, lastAt: performance.now() };
+  let lifted = false;   // the manifesto waits for the cover to lift
+  const mgr = THREE.DefaultLoadingManager;
+  const showPct = () => {
+    const p = load.total ? Math.floor(100 * load.loaded / load.total) : 0;
+    load.shown = Math.max(load.shown, Math.min(99, p));
+    if (pct) pct.textContent = String(load.shown);
+    if (cover) cover.style.setProperty('--p', (load.shown / 100).toFixed(2));
+  };
+  const seen = () => { load.lastAt = performance.now(); };
+  mgr.onStart = (u, l, t) => { load.loaded = l; load.total = t; seen(); showPct(); };
+  mgr.onProgress = (u, l, t) => { load.loaded = l; load.total = t; seen(); showPct(); };
+  mgr.onError = () => { seen(); };   // a missing texture never holds the cover
   const loader = new GLTFLoader();
+  // a load that never finishes must not hold the cover forever (review, 2026-10-28): if the scene is still not built
+  // after 20 s, fall back to the plain page, which hides the cover
+  let gaveUp = false;
+  const stall = setTimeout(() => { gaveUp = true; renderer.dispose(); goStatic('scene still loading after 20 s'); }, 20000);
   let opening, globe, cores, ending, gate;
   try {
     [opening, globe, cores, ending, gate] = await Promise.all([createOpening(ctx), createGlobe(ctx, loader), createCores(ctx), createEnding(ctx, loader, renderer), createRingGate(ctx, 0xffb547)]);
+    clearTimeout(stall);
+    if (gaveUp) return;
   } catch (e) {
+    clearTimeout(stall);
+    if (gaveUp) return;
     if (window.console) console.error('scene failed to build', e);
     renderer.dispose();
     return goStatic('scene build failed');
@@ -208,8 +233,12 @@ async function main() {
     if ((perf.acc += ms) < 1000) return;
     perf.acc = 0;
     let q = perf.q;
-    if (perf.avg > perf.interval * 1.12) { q = Math.max(0.5, q - 0.1); perf.good = 0; }
-    else if (perf.avg < perf.interval * 1.03 && q < 1 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
+    // phones hold sharpness first: resolution drops only below about 60 frames a second, not below a 120 Hz screen's
+    // own rate (2026-10-28, with the sharper phone render above)
+    const budget = ctx.phone ? Math.max(perf.interval, 1000 / 60) : perf.interval;
+    // floor: 0.7 of 2x on phones (about 1.4x, still sharp), 0.5 elsewhere as before, so a weak GPU keeps its room
+    if (perf.avg > budget * 1.12) { q = Math.max(ctx.phone ? 0.7 : 0.5, q - 0.1); perf.good = 0; }
+    else if (perf.avg < budget * 1.03 && q < 1 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
     if (q !== perf.q) { perf.q = q; layout(); }
   }
   let cur = 0, prevCur = 0, vel = 0, lastScrollAt = 0, touching = false, programmatic = 0, overscroll = 0, loopT = -1;
@@ -218,7 +247,9 @@ async function main() {
   let underscroll = 0, loopTo = 0;
   function layout() {
     W = innerWidth; H = innerHeight;
-    dpr = Math.min(devicePixelRatio || 1, ctx.phone ? 1.5 : 2) * perf.q;
+    // phones render at up to 2x too (Robin, 2026-10-28, comparing with igloo.inc on a phone: at 1.5x, and the
+    // governor's floor below that, the scene drew at well under the screen's own resolution)
+    dpr = Math.min(devicePixelRatio || 1, 2) * perf.q;
     if (W > 1) ctx.phone = W < 760;
     ctx.aspect = W / H;
     camera.aspect = ctx.aspect;
@@ -315,6 +346,31 @@ async function main() {
   }, { passive: true });
   document.addEventListener('pointerleave', () => { pointer.active = false; });
   addEventListener('pointerup', (e) => { if (e.pointerType === 'touch') pointer.active = false; });
+  // every finger on the screen, for the globe (Robin, 2026-10-28: several fingers at once on phones).
+  // Touch events, not pointer events: a phone cancels a pointer as soon as the touch starts scrolling the page, while
+  // touchmove keeps coming, so the blocks follow each finger through a swipe too. Up to four, in stable slots.
+  const fingers = [null, null, null, null];
+  function readTouches(e) {
+    const ids = [];
+    for (let i = 0; i < e.touches.length; i++) {
+      const tc = e.touches[i];
+      ids.push(tc.identifier);
+      let k = fingers.findIndex((f) => f && f.id === tc.identifier);
+      if (k < 0) k = fingers.indexOf(null);
+      if (k < 0) continue;
+      fingers[k] = { id: tc.identifier, x: tc.clientX / W * 2 - 1, y: 1 - tc.clientY / H * 2 };
+    }
+    for (let k = 0; k < fingers.length; k++) if (fingers[k] && !ids.includes(fingers[k].id)) fingers[k] = null;
+  }
+  ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach((ev) => addEventListener(ev, readTouches, { passive: true }));
+  // a system gesture or app switch can swallow the touchend: let go of every finger then
+  const dropFingers = () => fingers.fill(null);
+  addEventListener('blur', dropFingers);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) dropFingers(); });
+  const globeRays = [0, 1, 2, 3].map(() => new THREE.Ray()), rays = [null, null, null, null];
+  let lastPointerType = 'mouse';
+  addEventListener('pointerdown', (e) => { lastPointerType = e.pointerType; }, { passive: true });
+  addEventListener('pointermove', (e) => { lastPointerType = e.pointerType; }, { passive: true });
   // clicking a core in the scene (not only its HUD label) opens its sheet
   canvas.addEventListener('click', (e) => {
     if (!layers.cores.classList.contains('on')) return;
@@ -453,9 +509,15 @@ async function main() {
     ending.setPortal((port.x * 0.5 + 0.5) * W * dpr, (port.y * 0.5 + 0.5) * H * dpr, port.r * 0.5 * H * dpr);
     globe.group.visible = t < 2.995 && !endVisible;
     if (globe.group.visible) {
-      let ray = null;
-      if (pointer.active && !sheet.classList.contains('open')) { raycaster.setFromCamera(ndc.set(pointer.x, pointer.y), camera); ray = raycaster.ray; }
-      globe.update({ time, dt, part, collapse, position: globePos, radius: heroR + (mainR - heroR) * lift, coreA, coreB, flash, ray });
+      const open = sheet.classList.contains('open');
+      for (let k = 0; k < 4; k++) {
+        // the mouse (or pen) takes slot 0; fingers fill the slots they hold
+        const f = fingers[k];
+        const src = f ? f : (k === 0 && pointer.active && lastPointerType !== 'touch' ? pointer : null);
+        if (src && !open) { raycaster.setFromCamera(ndc.set(src.x, src.y), camera); rays[k] = globeRays[k].copy(raycaster.ray); }
+        else rays[k] = null;
+      }
+      globe.update({ time, dt, part, collapse, position: globePos, radius: heroR + (mainR - heroR) * lift, coreA, coreB, flash, rays });
     }
     opening.group.visible = true;
 
@@ -524,7 +586,7 @@ async function main() {
     sound.update({ t, dt, time, vel, flash, flashScale: 1 - 0.6 * smooth(2.2, 2.9, t), globeLight: globe.light, globeShown: globe.group.visible,
       collapse, toEnd, coreReveal: coresVisible ? smooth(0.55, 0.95, collapse) * (1 - smooth(0, 0.5, toEnd)) : 0,
       end: smooth(0.55, 0.9, toEnd), loopWhite });
-    if (fade > 0.2 && !html.classList.contains('ready')) html.classList.add('ready');
+    if (fade > 0.2 && lifted && !html.classList.contains('ready')) html.classList.add('ready');
     post.composer.render(dt);
   }
   function setLine(line, x1, y1, x2, y2, a) {
@@ -533,6 +595,22 @@ async function main() {
     line.style.opacity = a.toFixed(3);
   }
   requestAnimationFrame(frame);
+  // lift the cover once every asset is in, or once nothing new has arrived for 0.6 s (the manager can keep one internal
+  // item open after every file has landed, measured 2026-10-28), and at most 12 s after the build: a slow texture then
+  // streams in behind the scene
+  const builtAt = performance.now();
+  await new Promise((res) => {
+    const check = () => {
+      const now = performance.now();
+      if ((load.total && load.loaded >= load.total) || now - load.lastAt > 600 || now - builtAt > 12000) res();
+      else setTimeout(check, 100);
+    };
+    check();
+  });
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));   // two frames drawn with them
+  if (pct) pct.textContent = '100';
+  if (cover) { cover.style.setProperty('--p', '1'); cover.classList.add('gone'); setTimeout(() => { cover.hidden = true; }, 900); }
+  lifted = true;
   if (reduce.addEventListener) reduce.addEventListener('change', () => location.reload());
   if (window.console) console.info('scene ready: ' + globe.count + ' blocks, ' + ending.count + ' grains');
 }

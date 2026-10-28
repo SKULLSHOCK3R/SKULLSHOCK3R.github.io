@@ -10,7 +10,9 @@ import { ROT } from './glsl.js?v=3';
 
 const VERT_HEAD = /* glsl */`
 attribute vec3 aHome;attribute vec3 aSize;attribute vec4 aRand;attribute float aCore;
-uniform float uPart,uCollapse,uDist,uPtrAmt,uBreath,uHover;uniform vec3 uCoreA,uCoreB,uPtr;
+uniform float uPart,uCollapse,uDist,uBreath;uniform vec3 uCoreA,uCoreB;
+// up to four pointers at once: the mouse, or each finger on a phone (Robin, 2026-10-28)
+uniform vec3 uPtr[4];uniform float uPtrAmt[4],uHover[4];
 varying float vLift;varying vec3 vLocal;varying float vRad,vFace,vH;
 mat3 gM;vec3 gPos;float gShrink;
 ${ROT}
@@ -21,7 +23,9 @@ void blockFrame(){
  // orientation (only a slight tilt), and the light core inside shows through the widening seams
  float e=smoothstep(aRand.x*.6,aRand.x*.6+.5,uPart);
  // cursor: blocks under the pointer lift and tumble a little, then settle back as uPtrAmt eases off
- float pd=distance(n,uPtr);float push=uPtrAmt*exp(-pd*pd/.045)*(.6+.8*aRand.z);
+ float push=0.,hv=0.;
+ for(int k=0;k<4;k++){float pd=distance(n,uPtr[k]);push+=uPtrAmt[k]*exp(-pd*pd/.045);hv=max(hv,uHover[k]*(.1+.9*exp(-pd*pd/.1)));}
+ push*=.6+.8*aRand.z;
  // breathing at rest, like igloo.inc's igloo (Robin, 2026-10-26): the shell opens a little and closes again, the
  // upper blocks lifting most and tilting slightly; geometry only, no extra glow
  float br=uBreath*(.25+.75*smoothstep(-.4,1.,n.y))*(.7+.6*aRand.z);
@@ -29,7 +33,7 @@ void blockFrame(){
  // cursor"): while the cursor is over the globe the whole shell eases open, every block moving out and tilting at
  // random, the ones nearest the cursor most; it settles shut when the cursor leaves (uHover eases in globe.update)
  // (concentrated round the cursor: with ~2,900 small blocks, the whole shell tilting at once lit up as one white ball)
- float hv=uHover*(.1+.9*exp(-pd*pd/.1))*(.7+.6*aRand.w);
+ hv*=.7+.6*aRand.w;   // (each pointer's hover, taken above as the strongest at this block)
  mat3 R=rotAxis(normalize(aRand.yzw-.5+.001),e*.14*(aRand.y-.5)+push*.6+br*.12*(aRand.x-.5)+hv*1.0*(aRand.y-.5));
  // (each block a different distance out and a clear tilt, so the shell breaks up like igloo's rather than swelling
  // evenly as a lit grid)
@@ -88,8 +92,10 @@ export async function createGlobe(ctx, loader) {
     uPart: { value: 0 }, uCollapse: { value: 0 }, uDist: { value: 1.0 },
     uCoreA: { value: new THREE.Vector3(-1.5, 0, 0) }, uCoreB: { value: new THREE.Vector3(1.5, 0, 0) },
     uSeam: { value: new THREE.Color(0.45, 0.7, 1.0) }, uSeamAmt: { value: 0 },
-    uPtr: { value: new THREE.Vector3(0, 0, 1) }, uPtrAmt: { value: 0 }, uBreath: { value: 0 }, uHover: { value: 0 }
+    uPtr: { value: [0, 1, 2, 3].map(() => new THREE.Vector3(0, 0, 1)) }, uPtrAmt: { value: [0, 0, 0, 0] },
+    uBreath: { value: 0 }, uHover: { value: [0, 0, 0, 0] }
   };
+  const SLOTS = 4;
   mat.metalness = 0;
   mat.roughness = 0.85;   // a little sheen over the scanned roughness, so the storm light shows in the ice
   // image-based light from a 360 degree render of the same Blender storm as the opening plate (asset-src/render_plate.py
@@ -152,32 +158,39 @@ export async function createGlobe(ctx, loader) {
   });
   const tmp = new THREE.Vector3();
   const inv = new THREE.Matrix4(), localRay = new THREE.Ray(), unitSphere = new THREE.Sphere(new THREE.Vector3(), 1.02), hit = new THREE.Vector3();
-  let lastHit = null;
+  const lastHit = [null, null, null, null];
 
   /* state: time, dt, part, collapse, position (Vector3), radius, coreA/coreB world positions, flash,
-     ray (the pointer's world ray, or null) */
+     rays (up to four world rays, one per slot: the mouse in slot 0, or each finger; null where none) */
   function update(s) {
     group.position.copy(s.position);
     group.scale.setScalar(s.radius);
     group.rotation.y = s.time * 0.1 + s.part * 0.6 + s.collapse * 1.2;
     group.updateMatrixWorld();
     // the cursor disturbs the blocks it passes over: the push grows with pointer speed and eases off over ~2 s
-    let kick = 0;
-    if (s.ray) {
-      inv.copy(group.matrixWorld).invert();
-      localRay.copy(s.ray).applyMatrix4(inv);
-      if (localRay.intersectSphere(unitSphere, hit)) {
-        hit.normalize();
-        // a resting cursor still holds a small lift; moving it pushes harder
-        kick = Math.max(0.35, lastHit ? Math.min(1, hit.distanceTo(lastHit) / Math.max(s.dt, 0.004) * 0.6) : 0);
-        U.uPtr.value.lerp(hit, 1 - Math.exp(-s.dt * 18)).normalize();
-        lastHit = (lastHit || new THREE.Vector3()).copy(hit);
-      } else lastHit = null;
-    } else lastHit = null;
-    U.uPtrAmt.value = Math.max(U.uPtrAmt.value * Math.exp(-s.dt * 1.6), kick) * (1 - s.collapse);
-    // the shell eases open over about 1.5 s while the cursor is on it, and shut over about 2 s after it leaves
-    const over = lastHit !== null && s.collapse < 0.05 ? 1 : 0;
-    U.uHover.value += (over - U.uHover.value) * (1 - Math.exp(-s.dt * (over ? 1.6 : 1.2)));
+    inv.copy(group.matrixWorld).invert();
+    let hoverMax = 0;
+    for (let k = 0; k < SLOTS; k++) {
+      const ray = s.rays && s.rays[k];
+      let kick = 0;
+      if (ray) {
+        localRay.copy(ray).applyMatrix4(inv);
+        if (localRay.intersectSphere(unitSphere, hit)) {
+          hit.normalize();
+          // a resting cursor still holds a small lift; moving it pushes harder
+          const prev = lastHit[k];
+          kick = Math.max(0.35, prev ? Math.min(1, hit.distanceTo(prev) / Math.max(s.dt, 0.004) * 0.6) : 0);
+          // a new touch lands where it is, not swept across from the slot's last place
+          if (prev) U.uPtr.value[k].lerp(hit, 1 - Math.exp(-s.dt * 18)).normalize(); else U.uPtr.value[k].copy(hit);
+          lastHit[k] = (prev || new THREE.Vector3()).copy(hit);
+        } else lastHit[k] = null;
+      } else lastHit[k] = null;
+      U.uPtrAmt.value[k] = Math.max(U.uPtrAmt.value[k] * Math.exp(-s.dt * 1.6), kick) * (1 - s.collapse);
+      // the shell eases open over about 1.5 s while a pointer is on it, and shut over about 2 s after it leaves
+      const over = lastHit[k] !== null && s.collapse < 0.05 ? 1 : 0;
+      U.uHover.value[k] += (over - U.uHover.value[k]) * (1 - Math.exp(-s.dt * (over ? 1.6 : 1.2)));
+      hoverMax = Math.max(hoverMax, U.uHover.value[k]);
+    }
     U.uPart.value = s.part;
     U.uCollapse.value = s.collapse;
     // breath: opens and closes every 4.5 s, then rests a moment (igloo's rhythm), only while the globe is whole
@@ -198,7 +211,7 @@ export async function createGlobe(ctx, loader) {
     mesh.visible = s.collapse < 0.995;
     // how brightly the globe shines right now (its inner faces show as the shell opens: breathing, hover, parting),
     // for its light in the water and on Luffy (Robin, 2026-10-27: "only when the globe lights up")
-    light = Math.max(smooth(0.08, 0.4, U.uBreath.value), U.uHover.value, Math.min(1, s.part * 1.6)) * (1 - s.collapse);
+    light = Math.max(smooth(0.08, 0.4, U.uBreath.value), hoverMax, Math.min(1, s.part * 1.6)) * (1 - s.collapse);
   }
   let light = 0;
   function smooth(a, b, x) { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); }

@@ -40,7 +40,14 @@ small { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; colo
 .brand .sound.on { color: var(--ink); }
 .brand .sound:hover, .brand .sound:focus-visible { color: #fff; }
 .brand .sound[hidden], html:not(.gl) .brand .sound { display: none; }
-@media (max-width: 759px) { .brand .sound { position: fixed; right: var(--gutter); top: var(--gutter); margin: 0; } }   /* phones: clear of the opening text */
+/* the preloader (app.js): a small count and a hairline over black, as on igloo.inc; scene layout only */
+#loader { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg); color: var(--ink); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; transition: opacity 0.8s ease; --p: 0; }
+#loader .what { color: var(--dim); font-size: 9.5px; }
+#loader .bar { display: block; width: 140px; height: 1px; margin-top: 8px; background: rgba(170, 190, 230, 0.18); position: relative; overflow: hidden; }
+#loader .bar::after { content: ""; position: absolute; inset: 0; background: #dfe9ff; transform-origin: left; transform: scaleX(var(--p)); transition: transform 0.3s ease; }
+#loader.gone { opacity: 0; pointer-events: none; }
+#loader[hidden], html:not(.gl) #loader { display: none; }
 #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
 #hudlines { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9; pointer-events: none; }
 #hudlines line { stroke: rgba(190, 210, 255, 0.75); stroke-width: 1; }
@@ -133,6 +140,7 @@ html.gl .layer.on { opacity: 1; visibility: visible; transition: opacity 0.45s e
 html.debug .layer, html.debug .manifesto span, html.debug .sheet-inner, html.debug #sheet { transition: none; }   /* ?t= screenshots */
 html.gl .layer a, html.gl .layer button { pointer-events: auto; }
 html.gl .sheet-src, html.gl .scene-note { display: none; }
+/* the intro sits top right, clear of Imu's face (Robin, 2026-10-28) */
 html.gl .layer-open .col { position: absolute; right: var(--gutter); top: var(--gutter); text-align: right; opacity: var(--open-fade); }
 html.gl .layer-open .manifesto { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 12vh; text-align: center; opacity: var(--open-fade); text-shadow: 0 0 30px rgba(0, 0, 0, 0.9); }
 html.gl .manifesto span { opacity: 0; transform: translateY(10px); transition: opacity 1.6s ease, transform 1.6s ease; }
@@ -157,9 +165,15 @@ html.gl::-webkit-scrollbar, html.gl body::-webkit-scrollbar { display: none; wid
 @media (max-width: 760px) {
   body { font-size: 14px; }
   .brand { font-size: 11px; }
-  html.gl .layer-open .col { right: var(--gutter); left: var(--gutter); top: calc(var(--gutter) + 44px); text-align: left; max-width: none; font-size: 11.5px; }
-  html.gl .layer-open .col .eit { max-width: 300px; }
-  html.gl .layer-open .manifesto { bottom: 10vh; font-size: 22px; }
+  /* phones, laid out like igloo.inc's opening (Robin, 2026-10-28: no full-width block, and keep Imu's face clear): the
+     name and the sound switch top left, the intro a narrow right-aligned column top right, in bright small type with a
+     soft glow so it reads over the storm */
+  .brand .who { font-size: 10.5px; }
+  html.gl .layer-open .col { left: auto; right: var(--gutter); top: var(--gutter); width: 47vw; max-width: 220px; text-align: right;
+    font-size: 10px; line-height: 1.45; letter-spacing: 0; color: #dfe6f5;
+    text-shadow: 0 0 10px rgba(190, 210, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.7); }
+  html.gl .layer-open .col .eit { color: #fff; margin-bottom: 8px; }
+  html.gl .layer-open .manifesto { bottom: calc(3vh + 62px); font-size: 22px; }   /* above the Scroll cue, not on it */
   html.gl .layer-end .ending-ui { grid-template-columns: 1fr; gap: 10px; padding-bottom: 14px; text-align: center; }
   html.gl .layer-end .contacts, html.gl .layer-end .fine-col { grid-column: 1; text-align: center; justify-self: center; }
   html.gl .layer-end .contacts .links { justify-content: center; }
