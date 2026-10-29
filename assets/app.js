@@ -226,16 +226,18 @@ async function main() {
     if (!(ms > 0 && ms < 100)) return;              // a hidden tab or a stall says nothing about the frame cost
     if (!perf.interval) {
       perf.deltas.push(ms);
-      if (perf.deltas.length >= 90) perf.interval = perf.deltas.sort((a, b) => a - b)[45];
+      // the display's interval is the shortest steady gap, not the median: a phone's first frames, drawn while the
+      // models load, ran slow and read a 120 Hz screen as 60 (2026-10-29)
+      if (perf.deltas.length >= 90) perf.interval = perf.deltas.sort((a, b) => a - b)[9];
       return;
     }
     perf.avg = perf.avg ? perf.avg * 0.92 + ms * 0.08 : ms;
     if ((perf.acc += ms) < 1000) return;
     perf.acc = 0;
     let q = perf.q;
-    // phones hold sharpness first: resolution drops only below about 60 frames a second, not below a 120 Hz screen's
-    // own rate (2026-10-28, with the sharper phone render above)
-    const budget = ctx.phone ? Math.max(perf.interval, 1000 / 60) : perf.interval;
+    // phones hold the display's own rate too (Robin, 2026-10-29: "Is the motion set to 120 fps for the phone animations
+    // as well?"); until then they settled for 60 on a 120 Hz screen. Sharpness is kept by the floor below
+    const budget = perf.interval;
     // floor: 0.7 of 2x on phones (about 1.4x, still sharp), 0.5 elsewhere as before, so a weak GPU keeps its room
     if (perf.avg > budget * 1.12) { q = Math.max(ctx.phone ? 0.7 : 0.5, q - 0.1); perf.good = 0; }
     else if (perf.avg < budget * 1.03 && q < 1 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
@@ -259,11 +261,24 @@ async function main() {
     post.setSize(W, H, dpr);
     hudLines.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   }
+  // touch screens scroll a virtual page, as igloo.inc's phone site does (Robin, 2026-10-29: "a very slow scroll exactly
+  // the same as ... the igloo phone site", and a pull down at the landing kept reloading the page): the document itself
+  // never scrolls there (html.touchscroll: overflow hidden, touch-action none), so the browser has no pull-to-refresh or
+  // fling to run; a finger moves the page at TOUCH_GAIN of its travel and a flick carries on briefly, then settles
+  const TOUCH_GAIN = 0.5, FLING = 0.45, FLING_DECAY = 4;
+  const vs = { on: !!(window.matchMedia && matchMedia('(pointer: coarse)').matches), y: 0, goal: -1, v: 0 };
+  if (vs.on) html.classList.add('touchscroll');
+  const pageY = () => (vs.on ? vs.y : scrollY);
+  function setPageY(y) {
+    if (vs.on) { vs.y = clamp(y, 0, maxScroll()); vs.goal = -1; vs.v = 0; } else scrollTo({ top: y, behavior: 'instant' });
+  }
   function pageLayout() {
     // each scene takes STROLL screens of scrolling (Robin, 2026-10-26: "we fly through the animation, more like a
     // slow stroll")
+    const oldPH = PH;
     PH = innerHeight * STROLL;
     spacer.style.height = ((PAGES + 1) * PH) + 'px';
+    if (vs.on && oldPH > 1) vs.y *= PH / oldPH;   // a turned phone keeps its place in the story
   }
   layout();
   pageLayout();
@@ -274,7 +289,7 @@ async function main() {
   // always open at the landing (Robin, 2026-10-26: a reload restored the last scroll and opened mid-globe)
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   if (debugT === null) scrollTo(0, 0);
-  let lastDir = 1, lastY = scrollY;
+  let lastDir = 1, lastY = pageY();
   addEventListener('scroll', () => {
     lastScrollAt = performance.now();
     if (!programmatic && scrollY !== lastY) lastDir = scrollY > lastY ? 1 : -1;
@@ -283,32 +298,78 @@ async function main() {
   addEventListener('wheel', (e) => {
     programmatic = 0;
     if (e.deltaY) lastDir = e.deltaY > 0 ? 1 : -1;
-    if (scrollY >= maxScroll() - 2 && e.deltaY > 0) overscroll += e.deltaY;
-    if (scrollY <= 2 && e.deltaY < 0) underscroll -= e.deltaY;
+    if (pageY() >= maxScroll() - 2 && e.deltaY > 0) overscroll += e.deltaY;
+    if (pageY() <= 2 && e.deltaY < 0) underscroll -= e.deltaY;
+    if (vs.on && !sheet.classList.contains('open')) { vs.goal = -1; vs.v = 0; vs.y = clamp(vs.y + e.deltaY, 0, maxScroll()); lastScrollAt = performance.now(); }
   }, { passive: true });
   addEventListener('touchstart', () => { touching = true; programmatic = 0; }, { passive: true });
   addEventListener('touchend', () => { touching = false; }, { passive: true });
-  let touchY = null;
+  let touchY = null, touchAt = 0, touchV = 0;
+  addEventListener('touchstart', (e) => {
+    if (!vs.on || e.touches.length !== 1) return;
+    touchY = e.touches[0].clientY; touchAt = e.timeStamp; touchV = 0; vs.v = 0; vs.goal = -1;
+  }, { passive: true });
   addEventListener('touchmove', (e) => {
     const y = e.touches[0].clientY;
+    if (vs.on) {
+      // the open sheet scrolls its own text; elsewhere the page is ours, so the browser gets no pull-to-refresh
+      if (sheet.classList.contains('open')) { touchY = null; return; }
+      if (e.cancelable) e.preventDefault();
+      if (touchY === null) { touchY = y; touchAt = e.timeStamp; return; }
+      const dy = touchY - y, dts = Math.max(1, e.timeStamp - touchAt) / 1000;
+      if (vs.y >= maxScroll() - 2 && dy > 0) overscroll += dy * 2.5;
+      if (vs.y <= 2 && dy < 0) underscroll -= dy * 2.5;
+      vs.y = clamp(vs.y + dy * TOUCH_GAIN, 0, maxScroll());
+      touchV = touchV * 0.6 + (dy * TOUCH_GAIN / dts) * 0.4;   // smoothed finger speed, page px a second
+      if (dy) { lastDir = dy > 0 ? 1 : -1; lastScrollAt = performance.now(); }
+      touchY = y; touchAt = e.timeStamp;
+      return;
+    }
     if (touchY !== null && scrollY >= maxScroll() - 2 && touchY - y > 0) overscroll += (touchY - y) * 2.5;
     if (touchY !== null && scrollY <= 2 && y - touchY > 0) underscroll += (y - touchY) * 2.5;
     touchY = y;
-  }, { passive: true });
-  addEventListener('touchend', () => { touchY = null; }, { passive: true });
+  }, { passive: false });
+  const touchUp = (e) => {
+    // a flick carries on a little (a finger resting before it lifts throws nothing)
+    if (vs.on && touchY !== null && e.timeStamp - touchAt < 80) vs.v = clamp(touchV * FLING, -PH * 0.6, PH * 0.6);
+    touchY = null;
+  };
+  addEventListener('touchend', touchUp, { passive: true });
+  addEventListener('touchcancel', touchUp, { passive: true });
   addEventListener('keydown', (e) => {
-    if ((e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') && scrollY >= maxScroll() - 2 && !sheet.classList.contains('open')) overscroll += 300;
-    if ((e.key === 'ArrowUp' || e.key === 'PageUp') && scrollY <= 2 && !sheet.classList.contains('open')) underscroll += 300;
+    if (sheet.classList.contains('open')) return;
+    const down = e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ', up = e.key === 'ArrowUp' || e.key === 'PageUp';
+    if (down && pageY() >= maxScroll() - 2) overscroll += 300;
+    if (up && pageY() <= 2) underscroll += 300;
+    // a keyboard on a touch screen (a tablet's) steps the virtual page
+    if (vs.on && (down || up) && !e.target.closest('a, button, input')) { e.preventDefault(); vs.goal = -1; vs.v = (down ? 1 : -1) * PH * 0.35 * FLING_DECAY; lastDir = down ? 1 : -1; }
   });
   function maxScroll() { return PAGES * PH; }
   function scrollToPage(p, instant) {
     programmatic = performance.now();
-    scrollTo({ top: p * PH, behavior: instant ? 'instant' : 'smooth' });
+    if (vs.on) { if (instant) setPageY(p * PH); else { vs.goal = clamp(p * PH, 0, maxScroll()); vs.v = 0; } }
+    else scrollTo({ top: p * PH, behavior: instant ? 'instant' : 'smooth' });
+  }
+  // moves the virtual page each frame: a flick's glide, or the ease onto a scene that scrollToPage asked for
+  function touchScrollTick(dt, now) {
+    if (!vs.on || touching) return;
+    if (vs.goal >= 0) {
+      vs.y += (vs.goal - vs.y) * (1 - Math.exp(-dt * 3));
+      if (Math.abs(vs.goal - vs.y) < 0.5) { vs.y = vs.goal; vs.goal = -1; }
+    } else if (vs.v) {
+      const y0 = vs.y;
+      vs.y = clamp(vs.y + vs.v * dt, 0, maxScroll());
+      if (vs.y === 0 && y0 > 0 && vs.v < 0) underscroll -= vs.v * dt;   // a flick into an end still counts as a pull
+      if (vs.y === maxScroll() && y0 < vs.y && vs.v > 0) overscroll += vs.v * dt;
+      vs.v *= Math.exp(-dt * FLING_DECAY);
+      if (Math.abs(vs.v) < 4 || vs.y === 0 || vs.y === maxScroll()) vs.v = 0;
+      lastScrollAt = now;
+    }
   }
   function snapTick(now, target) {
     if (touching || sheet.classList.contains('open')) return;
     if (programmatic && now - programmatic < 1400) {
-      if (Math.abs(scrollY - Math.round(scrollY / PH) * PH) < 1.5) programmatic = 0;
+      if (Math.abs(pageY() - Math.round(pageY() / PH) * PH) < 1.5) programmatic = 0;
       return;
     }
     programmatic = 0;
@@ -318,7 +379,9 @@ async function main() {
     const lo = Math.floor(target), frac = target - lo;
     // the last transition (cores to the ending, through the ring gate) pulls far more gently (Robin, 2026-10-26: "the
     // gravity on the last transition seems very high"): a longer rest first, and it carries on only past 60 %
-    const last = lo === PAGES - 1, carry = last ? 0.6 : 0.25;
+    // on a touch screen a finger moves the page slowly, so one deliberate swipe (a tenth of the way) is enough to
+    // carry on to the next scene rather than fall back (2026-10-29)
+    const last = lo === PAGES - 1, carry = vs.on ? (last ? 0.3 : 0.1) : (last ? 0.6 : 0.25);
     if (now - lastScrollAt < (last ? 1200 : 550)) return;
     if (frac < 0.004 || frac > 0.996) return;
     const next = lastDir > 0 ? (frac > carry ? lo + 1 : lo) : (frac < 1 - carry ? lo : lo + 1);
@@ -433,14 +496,15 @@ async function main() {
     if (W !== lastW || Math.abs(innerHeight * STROLL - lastPH) > lastPH * 0.25) { pageLayout(); lastW = W; lastPH = PH; }
     if (W < 2 || H < 2 || PH < 2) return;   // loaded in a hidden pane: wait for a real size
     if (pendingJump !== null) {
-      scrollTo({ top: pendingJump * PH, behavior: 'instant' });
+      setPageY(pendingJump * PH);
       cur = prevCur = pendingJump;
       lastScrollAt = now + 5000;
       pendingJump = null;
     }
 
     // scroll smoothing, snapping, the loop past the end
-    const target = clamp(scrollY / PH, 0, PAGES);
+    touchScrollTick(dt, now);
+    const target = clamp(pageY() / PH, 0, PAGES);
     cur += (target - cur) * (1 - Math.exp(-dt * 3.5));   // eases after the scroll, unhurried
     if (Math.abs(target - cur) < 0.0004) cur = target;
     vel = (cur - prevCur) / dt; prevCur = cur;
@@ -561,7 +625,11 @@ async function main() {
           setLine(it.line, lx, ly - 2, sp.x, sp.y - rpx * 0.9, show * 0.6);
         } else {
           const dx = i === 0 ? -1 : 1;
-          const lx = sp.x + dx * rpx * 0.95 + dx * 14, ly = sp.y - rpx * 0.95 - 10;
+          let lx = sp.x + dx * rpx * 0.95 + dx * 14;
+          const ly = sp.y - rpx * 0.95 - 10;
+          // keep the whole label on screen (a phone held sideways ran E.V.'s line off the right edge, 2026-10-29)
+          const lw = it.el.offsetWidth || 0;
+          lx = dx < 0 ? Math.max(lx, 16 + lw) : Math.min(lx, W - 16 - lw);
           it.el.style.transform = 'translate(' + (dx < 0 ? 'calc(-100% + ' + lx.toFixed(1) + 'px)' : lx.toFixed(1) + 'px') + ',' + (ly - 30).toFixed(1) + 'px)';
           it.el.style.opacity = show.toFixed(3);
           setLine(it.line, lx, ly, sp.x + dx * rpx * 0.72, sp.y - rpx * 0.72, show * 0.6);

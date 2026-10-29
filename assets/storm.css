@@ -161,6 +161,11 @@ html.gl .spacer { height: 500vh; }
 /* no visible scrollbar in the scene (as on igloo.inc); scrolling itself still works by wheel, touch and keys */
 html.gl { scrollbar-width: none; -ms-overflow-style: none; }
 html.gl::-webkit-scrollbar, html.gl body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* touch screens (app.js adds touchscroll): the page is moved by script, as on igloo.inc's phone site, so the document
+   never scrolls and the browser has no pull-to-refresh or rubber band to run; the open sheet still scrolls its text */
+html.gl.touchscroll, html.gl.touchscroll body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+html.gl.touchscroll #sheet { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; align-items: flex-start; }
+html.gl.touchscroll .sheet-inner { margin: auto 0; }
 
 @media (max-width: 760px) {
   body { font-size: 14px; }
@@ -174,12 +179,37 @@ html.gl::-webkit-scrollbar, html.gl body::-webkit-scrollbar { display: none; wid
     text-shadow: 0 0 10px rgba(190, 210, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.7); }
   html.gl .layer-open .col .eit { color: #fff; margin-bottom: 8px; }
   html.gl .layer-open .manifesto { bottom: calc(3vh + 62px); font-size: 22px; }   /* above the Scroll cue, not on it */
-  html.gl .layer-end .ending-ui { grid-template-columns: 1fr; gap: 10px; padding-bottom: 14px; text-align: center; }
-  html.gl .layer-end .contacts, html.gl .layer-end .fine-col { grid-column: 1; text-align: center; justify-self: center; }
-  html.gl .layer-end .contacts .links { justify-content: center; }
-  html.gl .layer-end .carousel { grid-column: 1; }
-  html.gl .layer-end .fine { font-size: 9.5px; max-width: none; }
+  /* the ending as on desktop, not a centred footer (Robin, 2026-10-29: "looks like its the end of the website"): the
+     carousel under the pedestal, the contacts at the left and the fine print a narrow right-aligned column at the side */
+  html.gl .layer-end .ending-ui { grid-template-columns: 1fr 1fr; gap: 14px 12px; padding-bottom: 14px; }
+  html.gl .layer-end .carousel { grid-column: 1 / -1; grid-row: 1; margin-bottom: 4px; }
+  html.gl .layer-end .contacts { grid-column: 1; grid-row: 2; font-size: 11px; line-height: 1.5; }
+  html.gl .layer-end .contacts .links { flex-direction: column; gap: 3px; }
+  html.gl .layer-end .fine-col { grid-column: 2; grid-row: 2; }
+  html.gl .layer-end .fine { font-size: 9px; line-height: 1.45; max-width: 190px; }
   .tag { font-size: 9.5px; }
+}
+/* phones held sideways (Robin, 2026-10-29: the text covered the scene and ran into itself): the same small, glowing
+   type as a phone held upright, with the desktop's arrangement across the wide screen */
+@media (orientation: landscape) and (max-height: 500px) {
+  .brand { font-size: 11px; line-height: 1.5; }
+  .brand .who { font-size: 10.5px; }
+  .brand .sound { margin-top: 4px; }
+  html.gl .layer-open .col { width: 32vw; max-width: 270px; font-size: 10px; line-height: 1.45; letter-spacing: 0; color: #dfe6f5;
+    text-shadow: 0 0 10px rgba(190, 210, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.7); }
+  html.gl .layer-open .col .eit { color: #fff; margin-bottom: 6px; }
+  html.gl .layer-open .manifesto { bottom: calc(3vh + 50px); font-size: 22px; }   /* above the Scroll cue, not on it */
+  html.gl .layer-open .cue::after { height: 22px; margin-top: 6px; }
+  .tag { font-size: 9.5px; }
+  .hud-item { font-size: 10.5px; }
+  .hud-item small { font-size: 9px; }
+  html.gl .layer-end .ending-ui { gap: 12px; padding-bottom: 10px; }
+  html.gl .layer-end .contacts { font-size: 10.5px; line-height: 1.45; }
+  html.gl .layer-end .contacts .links { gap: 2px 12px; margin-top: 4px; }
+  html.gl .layer-end .carousel .current { padding: 6px 16px; font-size: 11px; }
+  html.gl .layer-end .carousel .side { font-size: 10px; padding: 6px; }
+  html.gl .layer-end .fine { font-size: 9px; line-height: 1.45; max-width: 250px; }
+  .copy { font-size: 9px; padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html.gl .layer-open .cue::after { animation: none; }

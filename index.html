@@ -9,7 +9,7 @@
 <!-- Plate slot: once a photoreal still or clip is in place, name it here (assets/plates/hero.jpg or assets/plates/hero.mp4) and the opening uses it under the storm effects. -->
 <meta name="hero-plate" content="assets/plates/hero.jpg">
 <link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/storm.css?v=13">
+<link rel="stylesheet" href="assets/storm.css?v=14">
 <script>
 /* Picks the scene layout before first paint when WebGL2 is likely and motion is allowed; assets/app.js confirms it or falls back to the plain page. */
 (function () { try { if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'WebGL2RenderingContext' in window) document.documentElement.classList.add('gl'); } catch (e) {} })();
@@ -113,6 +113,6 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
   </div>
 </div>
 
-<script type="module" src="assets/app.js?v=108" onerror="document.documentElement.classList.remove('gl')"></script>
+<script type="module" src="assets/app.js?v=109" onerror="document.documentElement.classList.remove('gl')"></script>
 </body>
 </html>
