@@ -71,6 +71,7 @@ main { position: relative; z-index: 5; }
 .hud-item small { display: block; font-size: 10px; letter-spacing: 0.14em; color: var(--muted); margin-top: 2px; text-transform: none; }
 .hud-item[data-item="jarvis"] { color: var(--gold); }
 .hud-item[data-item="ev"] { color: var(--ev); }
+.hud-item[data-item="homer"] { color: var(--homer); }
 .hud-item:hover, .hud-item:focus-visible { color: #fff; }
 
 .sheet-src { max-width: 520px; color: var(--muted); font-size: 13px; }
@@ -107,6 +108,7 @@ main { position: relative; z-index: 5; }
 .sheet-body .sheet-name { font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink); margin-bottom: 12px; }
 #sheet[data-key="jarvis"] .sheet-name { color: var(--gold); }
 #sheet[data-key="ev"] .sheet-name { color: var(--ev); }
+#sheet[data-key="homer"] .sheet-name { color: var(--homer); }
 .sheet-body ul { margin: 0 0 10px; padding-left: 16px; }
 .sheet-body li + li { margin-top: 6px; }
 .sheet-body p + p { margin-top: 10px; }
