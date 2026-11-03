@@ -1,4 +1,5 @@
-/* The two AI cores (J.A.R.V.I.S. gold, E.V. purple): a CORE hologram as GPU lines. A sphere of broken
+/* The three AI cores (J.A.R.V.I.S. gold, E.V. purple, H.O.M.E.R. green; Robin, 2026-11-03: "the globe would dissipate
+   into 3 cores instead of 2 (a nice equilateral triangle)"): a CORE hologram as GPU lines. A sphere of broken
    filaments (latitude bands, meridians, tilted circles and a knot at the centre) in four layers, each turning on its
    own axis; every filament traces on, holds, fades from its tail and rests, timed per arc in the vertex shader.
    Drawn additively (bloom gives the glow) with a soft centre sprite and a few orbiting motes. One draw call per core
@@ -9,8 +10,20 @@ import { rng } from './world.js?v=3';
 
 export const CORES = [
   { key: 'jarvis', name: 'J.A.R.V.I.S.', tint: 0xffb547, seed: 0x4a525653 },
-  { key: 'ev', name: 'E.V.', tint: 0xb57bff, seed: 0x45562121 }
+  { key: 'ev', name: 'E.V.', tint: 0xb57bff, seed: 0x45562121 },
+  { key: 'homer', name: 'H.O.M.E.R.', tint: 0x5be38c, seed: 0x484f4d52 }
 ];
+/* The triangle, point up: J.A.R.V.I.S. at the top, E.V. lower left, H.O.M.E.R. lower right. The side is the distance
+   between core centres in core radii; phones held upright pack them closer so the triangle fits the width. The
+   triangle drops by a quarter of its circumradius so it sits centred in the view. */
+const ANGLES = [90, 210, 330].map((a) => a * Math.PI / 180);
+// how far the three have come together (0 apart, 1 one core) for a given leave (0..1); ringgate.js closes the first
+// ring's pieces on the same curve
+export function mergeOf(leave) { const t = Math.min(1, Math.max(0, leave / 0.55)); return t * t * (3 - 2 * t); }
+export function corePlace(i, stacked, radius, out) {
+  const rc = (stacked ? 2.6 : 3.3) * radius / Math.sqrt(3);
+  return out.set(Math.cos(ANGLES[i]) * rc, Math.sin(ANGLES[i]) * rc - rc / 4, 0);
+}
 
 const VS = /* glsl */`
 attribute float aT,aLayer,aPeriod,aOffset;
@@ -143,33 +156,33 @@ export function createCores(ctx) {
   function update(s) {
     const stacked = ctx.aspect < 0.9;
     cores.forEach((c, i) => {
-      const side = i === 0 ? -1 : 1;
-      if (stacked) target.set(0, side * -0.95 * s.radius * 1.3, 0);
-      else target.set(side * 1.25 * s.radius * 1.5, 0, 0);
+      corePlace(i, stacked, s.radius, target);
       target.y += Math.sin(s.time * 0.5 + i * 2.1) * 0.03 * s.radius;
-      // on the way to the ending (Robin, 2026-10-26, after igloo.inc's ring fly-through) the camera dives into
-      // J.A.R.V.I.S.'s core: it slides to the centre and rushes at the lens until its rings pass around the view and
-      // its bright centre covers the switch; E.V.'s core drifts away to its side
-      const dive = i === 0 ? ease(s.leave) : 0;   // the ring gate (ringgate.js) comes at the end of the dive
-      if (i === 0) {
-        target.lerp(DIVE_TO, Math.pow(dive, 1.6));
-      } else {
-        target.y += s.leave * s.leave * side * 2.2;
-        target.x += s.leave * side * 1.2;
-        target.z += s.leave * 1.5;
-      }
+      // on the way to the ending (Robin, 2026-10-26, after igloo.inc's ring fly-through) the camera dives into the
+      // cores: the three come together at the centre, each bringing its piece of the first ring (ringgate.js), and
+      // rush at the lens as one until their rings pass around the view and the bright centre covers the switch
+      // (Robin, 2026-11-03: "the three cores come together bringing together the three portal chunks right as we pass
+      // through it")
+      // they meet across the screen first (merge), while the rush at the lens keeps its old pace (dive), so they come
+      // together before they grow past the edges of the view
+      const dive = ease(s.leave), merge = mergeOf(s.leave), rush = Math.pow(dive, 1.6);
+      target.x += (DIVE_TO.x - target.x) * Math.max(merge, rush);
+      target.y += (DIVE_TO.y - target.y) * Math.max(merge, rush);
+      target.z += (DIVE_TO.z - target.z) * rush;
       c.node.position.copy(target);
       const pop = 0.25 + 0.75 * ease(s.reveal);
       c.hover += ((c.hot ? 1 : 0) - c.hover) * Math.min(1, s.dt * 6);
-      c.node.scale.setScalar(s.radius * pop * (1 + 0.06 * c.hover + (i === 0 ? dive * 1.4 : s.leave * 0.4)));
+      c.base = s.radius * pop * (1 + dive * 1.4);   // without the hover swell: the labels and the hit test use this
+      c.node.scale.setScalar(c.base * (1 + 0.06 * c.hover));
       for (let k = 0; k < 4; k++) c.angles[k] += SPEEDS[k] * 0.22 * s.dt * (1 + 1.5 * c.hover);
       const u = c.mat.uniforms;
       u.uTime.value = s.time; u.uView.value = s.time * 0.05;
       u.uAng0.value = c.angles[0]; u.uAng1.value = c.angles[1]; u.uAng2.value = c.angles[2]; u.uAng3.value = c.angles[3];
-      // the diving core's rings stay bright until the camera is inside them; its glow sprite eases off, since at that
-      // range it would fill the view
-      const fadeOut = i === 0 ? 1 - ease((s.leave - 0.88) / 0.12) : 1 - s.leave;
-      const alpha = ease(s.reveal) * fadeOut * (1 + 0.5 * c.hover + (i === 0 ? s.leave * 0.8 : 0));
+      // the diving cores' rings stay bright until the camera is inside them; their glow sprites ease off, since at that
+      // range they would fill the view. As the three merge, E.V.'s and H.O.M.E.R.'s fade into J.A.R.V.I.S.'s, so the
+      // one core the camera enters is no brighter than before
+      const fadeOut = (1 - ease((s.leave - 0.88) / 0.12)) * (i === 0 ? 1 : 1 - ease((merge - 0.6) / 0.4));
+      const alpha = ease(s.reveal) * fadeOut * (1 + 0.5 * c.hover + s.leave * 0.8);
       u.uAlpha.value = alpha;
       const breath = 0.5 + 0.5 * Math.sin(s.time * Math.PI / 2 + i);
       c.glow.material.opacity = Math.min(0.8, (0.35 + 0.2 * breath + 0.25 * c.hover) * alpha * (1 - dive));
@@ -181,7 +194,11 @@ export function createCores(ctx) {
   function ease(t) { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }
   function worldPos(i, out) { return cores[i].node.getWorldPosition(out); }
   function worldRadius(i) { return cores[i].node.scale.x; }
+  // the radius without the hover swell. The labels sit off this one: placed off the swelling radius, a label slid a
+  // few pixels out from under a resting cursor as its core swelled, the core shrank back, the label slid back under
+  // the cursor and the chime rang again, over and over (Robin, 2026-11-03: "the music starts chiming continuously")
+  function baseRadius(i) { return cores[i].base || cores[i].node.scale.x; }
   function setHot(i, on) { cores[i].hot = on; }
 
-  return { group, update, worldPos, worldRadius, setHot, cores };
+  return { group, update, worldPos, worldRadius, baseRadius, setHot, cores };
 }

@@ -8,8 +8,10 @@
 <meta name="color-scheme" content="dark">
 <!-- Plate slot: once a photoreal still or clip is in place, name it here (assets/plates/hero.jpg or assets/plates/hero.mp4) and the opening uses it under the storm effects. -->
 <meta name="hero-plate" content="assets/plates/hero.jpg">
-<link rel="icon" type="image/gif" href="assets/avatar.gif">
-<link rel="stylesheet" href="assets/storm.css?v=14">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="stylesheet" href="assets/storm.css?v=15">
 <script>
 /* Picks the scene layout before first paint when WebGL2 is likely and motion is allowed; assets/app.js confirms it or falls back to the plain page. */
 (function () { try { if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'WebGL2RenderingContext' in window) document.documentElement.classList.add('gl'); } catch (e) {} })();
@@ -22,7 +24,7 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
 <a class="skip" href="#main">Skip to content</a>
 <header class="brand">SKULLSHOCK3R<span class="who">Akshith "Robin" Naidu</span><button type="button" class="sound" aria-live="polite" hidden>Sound off</button></header>
 
-<!-- The whole scene (storm, globe of blocks, the two cores, the particle chamber) draws on this one canvas. -->
+<!-- The whole scene (storm, globe of blocks, the three cores, the particle chamber) draws on this one canvas. -->
 <canvas id="stage" aria-hidden="true"></canvas>
 <!-- The preloader: shown only with the scene layout; app.js counts the models and textures in and lifts it. -->
 <div id="loader" aria-hidden="true"><p><span class="pct">0</span>%</p><p class="what">Building the world</p><span class="bar"></span></div>
@@ -44,16 +46,17 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
   <!-- 1. The world: a globe of baked stone blocks (our own map) that parts block by block, then collapses into the cores. -->
   <section class="layer layer-globe" data-scene="1" aria-labelledby="globe-title">
     <h2 id="globe-title" class="sr">The world</h2>
-    <p class="scene-note">A globe of stone blocks, our own map of the One Piece world, comes apart block by block and collapses into two AI cores.</p>
+    <p class="scene-note">A globe of stone blocks, our own map of the One Piece world, comes apart block by block and collapses into three AI cores.</p>
     <ul class="hud hud-globe" aria-label="World regions"></ul>
   </section>
 
-  <!-- 3. The two cores. Only the HUD callouts show; the text appears when a core is clicked (or its button pressed). -->
+  <!-- 3. The three cores. Only the HUD callouts show; the text appears when a core is clicked (or its button pressed). -->
   <section class="layer layer-cores" data-scene="3" aria-labelledby="cores-title">
-    <h2 id="cores-title" class="sr">Two cores, one rulebook</h2>
+    <h2 id="cores-title" class="sr">Three cores, one rulebook</h2>
     <ul class="hud hud-cores" aria-label="Cores">
       <li><button type="button" class="hud-item" data-item="jarvis" aria-controls="src-jarvis">J.A.R.V.I.S.<small>Claude Code &middot; coordinator</small></button></li>
       <li><button type="button" class="hud-item" data-item="ev" aria-controls="src-ev">E.V.<small>ChatGPT / Codex &middot; second assistant</small></button></li>
+      <li><button type="button" class="hud-item" data-item="homer" aria-controls="src-homer">H.O.M.E.R.<small>Google Antigravity &middot; third assistant</small></button></li>
       <li><button type="button" class="hud-item" data-item="engineering" aria-controls="src-engineering">Engineering<small>Energy, process systems and public policy</small></button></li>
     </ul>
     <div class="sheet-src" id="src-jarvis">
@@ -65,6 +68,11 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
       <p class="sheet-name">E.V.</p>
       <p>ChatGPT / Codex. Second assistant: second opinions and overflow; read-only as a stage.</p>
       <p>Runs from the same open-source starter kit (MIT licence): <a href="https://github.com/SKULLSHOCK3R/ai-workflows">github.com/SKULLSHOCK3R/ai-workflows</a></p>
+    </div>
+    <div class="sheet-src" id="src-homer">
+      <p class="sheet-name">H.O.M.E.R.</p>
+      <p>Google Antigravity (Gemini). Third assistant: second opinions and long reads; read-only as a stage.</p>
+      <p>Works from the same rulebook as the other two.</p>
     </div>
     <div class="sheet-src" id="src-engineering">
       <p class="sheet-name">Engineering</p>
@@ -98,7 +106,7 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
       </nav>
       <div class="fine-col">
         <p class="fine">H.I.V.E. is my private home-automation app: it connects my own Google Nest devices to Home Assistant. <a href="https://github.com/SKULLSHOCK3R/ai-workflows">GitHub repository</a> &middot; <a href="privacy.html">Privacy policy</a></p>
-        <p class="fine">Inspired by One Piece by Eiichiro Oda; not affiliated with or endorsed by its creator or rights holders. J.A.R.V.I.S. and E.V. are nicknames only. No trackers, no cookies, no external fonts.</p>
+        <p class="fine">Inspired by One Piece by Eiichiro Oda; not affiliated with or endorsed by its creator or rights holders. J.A.R.V.I.S., E.V. and H.O.M.E.R. are nicknames only. No trackers, no cookies, no external fonts.</p>
       </div>
     </div>
   </section>
@@ -113,6 +121,6 @@ setTimeout(function () { var h = document.documentElement; if (!h.hasAttribute('
   </div>
 </div>
 
-<script type="module" src="assets/app.js?v=109" onerror="document.documentElement.classList.remove('gl')"></script>
+<script type="module" src="assets/app.js?v=136" onerror="document.documentElement.classList.remove('gl')"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 /* Homepage (rebuilt 2026-10-26 on three.js 0.186.1, vendored in assets/vendor/three): one fullscreen canvas on a
    scroll-driven timeline with snap points at the opening (0), the globe (1), the parted globe (2), the cores (3) and
    the ending (4); post-processing masks every change of scene. Modules: opening.js (storm, figures), globe.js (the
-   instanced block world), cores.js (the two filament cores), ending.js (the particle chamber), post.js (bloom, grade),
+   instanced block world), cores.js (the three filament cores), ending.js (the particle chamber), post.js (bloom, grade),
    sound.js (synthesised sound, off until the visitor turns it on).
    The page text is ordinary HTML; this file positions the HUD items over the scene, runs the click sheets, the
    carousel and the loop back to the top. Reduced motion or no WebGL2: the html element gets class "static" and the
@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createPost } from './post.js?v=3';
 import { createOpening } from './opening.js?v=35';
-import { createGlobe } from './globe.js?v=40';
-import { createCores } from './cores.js?v=8';
-import { createEnding, ITEMS } from './ending.js?v=13';
-import { createRingGate } from './ringgate.js?v=12';
+import { createGlobe } from './globe.js?v=41';
+import { createCores, mergeOf } from './cores.js?v=10';
+import { createEnding, ITEMS } from './ending.js?v=36';
+import { createRingGate } from './ringgate.js?v=13';
 import { stillSvg } from './figures.js?v=15';
-import { createSound } from './sound.js?v=9';
+import { createSound } from './sound.js?v=11';
 
 const html = document.documentElement;
 html.setAttribute('data-app', '1');   // the module ran: index.html's watchdog leaves the scene layout alone
@@ -201,7 +201,7 @@ async function main() {
   }
   coreItems.forEach((it) => {
     it.el.addEventListener('click', () => openSheet(it.key, it.el));
-    const ci = it.key === 'jarvis' ? 0 : it.key === 'ev' ? 1 : -1;
+    const ci = ['jarvis', 'ev', 'homer'].indexOf(it.key);
     if (ci >= 0) {
       it.el.addEventListener('focus', () => { cores.setHot(ci, true); sound.hover(ci); });
       it.el.addEventListener('blur', () => { cores.setHot(ci, false); sound.unhover(ci); });
@@ -412,6 +412,20 @@ async function main() {
   // a touch that turns into a scroll ends in pointercancel, not pointerup: without this the touch point stayed
   // "active" where the finger first landed, and a core scrolling under it chimed as if hovered (2026-10-28)
   addEventListener('pointercancel', (e) => { if (e.pointerType === 'touch') pointer.active = false; });
+  // a sideways drag across the chamber switches the sculpture (brief, 2026-11-03): mouse through pointer events,
+  // fingers through touch events (a vertical page scroll cancels the pointer, but touchend still arrives)
+  let dragFrom = null;
+  const dragStart = (x, y, el) => { dragFrom = ending.group.visible && !(el && el.closest && el.closest('a,button')) ? { x, y } : null; };
+  const dragEnd = (x, y) => {
+    if (!dragFrom) return;
+    const dx = x - dragFrom.x, dy = y - dragFrom.y;
+    dragFrom = null;
+    if (Math.abs(dx) > Math.max(70, W * 0.08) && Math.abs(dy) < Math.abs(dx) * 0.6) car.go(dx < 0 ? 1 : -1);
+  };
+  addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') dragStart(e.clientX, e.clientY, e.target); }, { passive: true });
+  addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') dragEnd(e.clientX, e.clientY); }, { passive: true });
+  addEventListener('touchstart', (e) => { if (e.touches.length === 1) dragStart(e.touches[0].clientX, e.touches[0].clientY, e.target); else dragFrom = null; }, { passive: true });
+  addEventListener('touchend', (e) => { const t = e.changedTouches[0]; if (t) dragEnd(t.clientX, t.clientY); }, { passive: true });
   // every finger on the screen, for the globe (Robin, 2026-10-28: several fingers at once on phones).
   // Touch events, not pointer events: a phone cancels a pointer as soon as the touch starts scrolling the page, while
   // touchmove keeps coming, so the blocks follow each finger through a swipe too. Up to four, in stable slots.
@@ -441,7 +455,7 @@ async function main() {
   canvas.addEventListener('click', (e) => {
     if (!layers.cores.classList.contains('on')) return;
     const i = coreUnder(e.clientX, e.clientY);
-    if (i >= 0) openSheet(i === 0 ? 'jarvis' : 'ev', coreItems[i].el);
+    if (i >= 0) openSheet(coreItems[i].key, coreItems[i].el);
   });
   // the camera drifts a little toward the mouse, as on igloo.inc; the pointer's world ray feeds the globe push
   const camDrift = new THREE.Vector2(), raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -468,9 +482,9 @@ async function main() {
     out.x = (v3b.x + 1) / 2 * W; out.y = (1 - v3b.y) / 2 * H; out.z = v3b.z;
     return out;
   }
-  const corePx = [{ x: 0, y: 0, r: 0 }, { x: 0, y: 0, r: 0 }];
+  const corePx = [0, 1, 2].map(() => ({ x: 0, y: 0, r: 0 }));
   function coreUnder(px, py) {
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < corePx.length; i++) {
       const c = corePx[i];
       if (Math.hypot(px - c.x, py - c.y) < c.r * 1.05) return i;
     }
@@ -478,7 +492,7 @@ async function main() {
   }
 
   /* ---- frame ---- */
-  const handPos = new THREE.Vector3(), globePos = new THREE.Vector3(), coreA = new THREE.Vector3(), coreB = new THREE.Vector3();
+  const handPos = new THREE.Vector3(), globePos = new THREE.Vector3(), coreA = new THREE.Vector3(), coreB = new THREE.Vector3(), coreC = new THREE.Vector3();
   const sp = { x: 0, y: 0, z: 0 };
   let time = 0, last = performance.now(), fade = 0, hoverCore = -1;
   let pendingJump = debugT;
@@ -562,16 +576,21 @@ async function main() {
     opening.handWorld(handPos);
     globePos.set(0, ctx.phone ? 0.12 : 0.04, 0).lerp(handPos, 1 - lift);
     opening.setGlobe(globePos, (1 - lift) * figures * globe.light);    // its light in the water and on Luffy, as it shines
-    const coreR = Math.min(0.6, 0.16 * viewH);
+    // three cores in a triangle (2026-11-03): a touch smaller, and on a phone held upright small enough that the
+    // triangle fits the width with a margin
+    const coreR = Math.min(0.6, 0.15 * viewH, (ctx.aspect < 0.9 ? 0.2 : 0.3) * viewH * ctx.aspect);
     cores.group.visible = coresVisible;
-    cores.update({ time, dt, radius: coreR, reveal: smooth(0.55, 0.95, collapse), leave: smooth(0, 0.5, toEnd) });
-    cores.worldPos(0, coreA); cores.worldPos(1, coreB);
+    const coresLeave = smooth(0, 0.5, toEnd);
+    cores.update({ time, dt, radius: coreR, reveal: smooth(0.55, 0.95, collapse), leave: coresLeave });
+    cores.worldPos(0, coreA); cores.worldPos(1, coreB); cores.worldPos(2, coreC);
     // the ring gate assembles round J.A.R.V.I.S.'s core as the camera dives into it (ringgate.js)
     // late in the dive, and carried across the switch, so the camera is still passing through the rings as the
     // overhead view of the pedestal opens (Robin, 2026-10-26: "too early with the rings still")
-    // the first ring floats within J.A.R.V.I.S.'s core whenever the cores are shown (Robin, 2026-10-26)
+    // the first ring floats within the cores whenever they are shown (Robin, 2026-10-26), a third of it at each core
+    // (2026-11-03); merge follows the cores' own dive (cores.js), so the pieces close as the cores do
     const port = gate.update({ leave: clamp((toEnd - 0.2) / 0.42, 0, 1), time, pos: coreA,
-      rest: coresVisible ? smooth(0.55, 0.95, collapse) : 0, coreR: cores.worldRadius(0) });
+      rest: coresVisible ? smooth(0.55, 0.95, collapse) : 0, coreR: cores.baseRadius(0),
+      pieces: [coreA, coreB, coreC], merge: mergeOf(coresLeave) });
     // the chamber shows only through the last ring's opening until that ring has swept past the edges
     ending.setPortal((port.x * 0.5 + 0.5) * W * dpr, (port.y * 0.5 + 0.5) * H * dpr, port.r * 0.5 * H * dpr);
     globe.group.visible = t < 2.995 && !endVisible;
@@ -584,7 +603,7 @@ async function main() {
         if (src && !open) { raycaster.setFromCamera(ndc.set(src.x, src.y), camera); rays[k] = globeRays[k].copy(raycaster.ray); }
         else rays[k] = null;
       }
-      globe.update({ time, dt, part, collapse, position: globePos, radius: heroR + (mainR - heroR) * lift, coreA, coreB, flash, rays });
+      globe.update({ time, dt, part, collapse, position: globePos, radius: heroR + (mainR - heroR) * lift, coreA, coreB, coreC, flash, rays });
     }
     opening.group.visible = true;
 
@@ -613,18 +632,26 @@ async function main() {
     if (layers.cores.classList.contains('on')) {
       const show = smooth(0.9, 1, collapse) * (1 - smooth(0.05, 0.3, toEnd));
       const stacked = ctx.aspect < 0.9;
-      for (let i = 0; i < 2; i++) {
-        project(i === 0 ? coreA : coreB, sp);
-        const rpx = cores.worldRadius(i) / ctx.halfH(0) * H / 2;
+      let lowest = 0;
+      for (let i = 0; i < 3; i++) {
+        project(i === 0 ? coreA : i === 1 ? coreB : coreC, sp);
+        // the radius without the hover swell, so a label never slides out from under a resting cursor (cores.js)
+        const rpx = cores.baseRadius(i) / ctx.halfH(0) * H / 2;
         corePx[i].x = sp.x; corePx[i].y = sp.y; corePx[i].r = rpx;
         const it = coreItems[i];
-        if (stacked) {   // phones: the label sits centred above its core
-          const lx = sp.x, ly = sp.y - rpx - 14;
-          it.el.style.transform = 'translate(calc(-50% + ' + lx.toFixed(1) + 'px),' + (ly - 36).toFixed(1) + 'px)';
+        if (stacked) {
+          // phones: J.A.R.V.I.S.'s label sits centred above his core; the lower two are too wide to sit side by side,
+          // so E.V.'s hangs from the left edge under her core and H.O.M.E.R.'s from the right edge a line lower
+          const up = i === 0, lh = it.el.offsetHeight || 36;
+          const ly = up ? sp.y - rpx - 14 : sp.y + rpx + 14 + (i === 2 ? lh + 8 : 0);
+          const tx = up ? 'calc(-50% + ' + sp.x.toFixed(1) + 'px)' : i === 1 ? '16px' : 'calc(-100% + ' + (W - 16).toFixed(1) + 'px)';
+          it.el.style.transform = 'translate(' + tx + ',' + (up ? ly - 36 : ly).toFixed(1) + 'px)';
           it.el.style.opacity = show.toFixed(3);
-          setLine(it.line, lx, ly - 2, sp.x, sp.y - rpx * 0.9, show * 0.6);
+          setLine(it.line, sp.x, ly - 2, sp.x, up ? sp.y - rpx * 0.9 : sp.y + rpx * 0.9, show * 0.6);
+          if (!up) lowest = Math.max(lowest, ly + lh);
         } else {
-          const dx = i === 0 ? -1 : 1;
+          const dx = i === 2 ? 1 : -1;   // J.A.R.V.I.S. and E.V. label to the left, H.O.M.E.R. to the right
+          lowest = Math.max(lowest, sp.y + rpx);
           let lx = sp.x + dx * rpx * 0.95 + dx * 14;
           const ly = sp.y - rpx * 0.95 - 10;
           // keep the whole label on screen (a phone held sideways ran E.V.'s line off the right edge, 2026-10-29)
@@ -635,13 +662,14 @@ async function main() {
           setLine(it.line, lx, ly, sp.x + dx * rpx * 0.72, sp.y - rpx * 0.72, show * 0.6);
         }
       }
-      const eng = coreItems[2];
-      if (eng) {
-        v3.set(0, stacked ? -coreR * 2.75 : -coreR * 1.9, 0);
+      const eng = coreItems[3];
+      if (eng) {   // below the triangle (and, on a phone, below the two lower labels), centred
+        v3.set(0, 0, 0);
         project(v3, sp);
-        eng.el.style.transform = 'translate(calc(-50% + ' + sp.x.toFixed(1) + 'px),' + (sp.y + 14).toFixed(1) + 'px)';
+        const ey = lowest + (stacked ? 18 : 22);
+        eng.el.style.transform = 'translate(calc(-50% + ' + sp.x.toFixed(1) + 'px),' + (ey + 14).toFixed(1) + 'px)';
         eng.el.style.opacity = show.toFixed(3);
-        setLine(eng.line, sp.x, sp.y - 2, sp.x, sp.y + 12, show * 0.6);
+        setLine(eng.line, sp.x, ey - 2, sp.x, ey + 12, show * 0.6);
       }
       const hc = pointer.active ? coreUnder(pointer.px, pointer.py) : -1;
       if (hc !== hoverCore) {

@@ -138,19 +138,19 @@ export function createSound(button) {
       return { o, k };
     });
     chain(S.voiceF, S.voice, S.music);
-    // the two cores: a quiet sine glow each, J.A.R.V.I.S. on G (left), E.V. on C (right). Touch screens keep the same
+    // the three cores: a quiet sine glow each, J.A.R.V.I.S. on G (top, centre), E.V. on C (left), H.O.M.E.R. on E (right;
     // notes and add a few soft overtones of the low one (3rd to 5th): a phone's small speaker barely sounds the low G
     // and C themselves, but plays the overtones, and the ear fills the low note back in (Robin, 2026-10-28: an
     // octave-up hum did not sound like the computer's)
     const OVER = TOUCH ? [[3, 0.2], [4, 0.12], [5, 0.07]] : [];
-    S.core = [[55, 67], [60, 72]].map((ms, i) => {
-      const g = gain(0), trem = gain(0.8), d = 1 + (i ? 0.0015 : -0.0015);
+    S.core = [[55, 67], [60, 72], [52, 64]].map((ms, i) => {
+      const g = gain(0), trem = gain(0.8), d = 1 + [-0.0015, 0.0015, 0.0008][i];
       ms.forEach((m, k) => osc('sine', hz(m) * d, k ? 0.35 : 0.6, trem));
       OVER.forEach(([h, lv]) => osc('sine', hz(ms[0]) * h * d, lv, trem));
-      const l = ac.createOscillator(); l.frequency.value = i ? 0.23 : 0.17; l.connect(gainTo(0.2, trem.gain)); l.start();
-      chain(trem, g, pan(i ? 0.4 : -0.4, S.bus));
+      const l = ac.createOscillator(); l.frequency.value = [0.17, 0.23, 0.2][i]; l.connect(gainTo(0.2, trem.gain)); l.start();
+      chain(trem, g, pan([0, -0.4, 0.4][i], S.bus));
       g.connect(gainTo(0.4, S.verbIn));
-      return { g, hot: false };
+      return { g, hot: false, chimed: -10 };
     });
     // the ring gate: a slow, dark rush under the dive
     S.riseF = filt('lowpass', 300, 0.5); S.rise = gain(0); chain(loopNoise(), S.riseF, S.rise, S.bus);
@@ -206,10 +206,10 @@ export function createSound(button) {
     chain(s, f, g, pan((Math.random() - 0.5) * 1.4, S.bus));
     s.start(t, Math.random() * 2, 0.08);
   }
-  const corePitch = [[67, 74, 79], [72, 76, 79]];   // G and C, as their glows
+  const corePitch = [[67, 74, 79], [72, 76, 79], [64, 71, 76]];   // G, C and E, as their glows
   function chime(i, soft) {
     const now = ac.currentTime;
-    if (soft) piano(corePitch[i][0] + 12, now, 0.14, i ? 0.4 : -0.4);
+    if (soft) piano(corePitch[i][0] + 12, now, 0.14, [0, -0.4, 0.4][i]);
     else arpeggio(corePitch[i], now, 0.16, 0.2);
   }
   // each ring that sweeps past breathes a low, warm swell of the current chord, a step higher for each ring, like the
@@ -320,11 +320,18 @@ export function createSound(button) {
 
   return {
     update,
-    hover(i) { if (on && ac && S.core[i] && !S.core[i].hot) chime(i, true); if (ac) S.core[i].hot = true; },
+    // a hover chimes at most once a second per core, so no flicker between a label and its core can ring it on and
+    // on
+    hover(i) {
+      const c = ac && S.core[i];
+      if (!c) return;
+      if (on && !c.hot && ac.currentTime - c.chimed > 1) { c.chimed = ac.currentTime; chime(i, false); }
+      c.hot = true;
+    },
     unhover(i) { if (ac && S.core[i]) S.core[i].hot = false; },
     sheet(open, key) {
       if (!on || !ac) return;
-      if (open) chime(key === 'ev' ? 1 : 0, false);
+      if (open) chime(Math.max(0, ['jarvis', 'ev', 'homer'].indexOf(key)), false);
       else piano(60, ac.currentTime, 0.1, 0);
     },
     shape() { if (on && ac) shapeNotes(); },

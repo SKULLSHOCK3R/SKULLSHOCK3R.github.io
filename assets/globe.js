@@ -2,7 +2,7 @@
    tinted per block from our map (world.js). Placement is done in the vertex shader through onBeforeCompile on the
    glb's own MeshStandardMaterial, so the blocks keep their baked colour, normal, roughness and occlusion maps:
      uPart      0..1  blocks lift off along their normals and tumble a little, with glowing seams (igloo-style parting)
-     uCollapse  0..1  blocks spiral into the two AI cores and shrink away
+     uCollapse  0..1  blocks spiral into the three AI cores and shrink away
    The instance matrices stay identity; the group handles spin, tilt, position and size. */
 import * as THREE from 'three';
 import { buildWorld, LABELS } from './world.js?v=3';
@@ -10,7 +10,7 @@ import { ROT } from './glsl.js?v=3';
 
 const VERT_HEAD = /* glsl */`
 attribute vec3 aHome;attribute vec3 aSize;attribute vec4 aRand;attribute float aCore;
-uniform float uPart,uCollapse,uDist,uBreath;uniform vec3 uCoreA,uCoreB;
+uniform float uPart,uCollapse,uDist,uBreath;uniform vec3 uCoreA,uCoreB,uCoreC;
 // up to four pointers at once: the mouse, or each finger on a phone (Robin, 2026-10-28)
 uniform vec3 uPtr[4];uniform float uPtrAmt[4],uHover[4];
 varying float vLift;varying vec3 vLocal;varying float vRad,vFace,vH;
@@ -39,7 +39,7 @@ void blockFrame(){
  // evenly as a lit grid)
  vec3 pos=aHome*(1.+e*uDist*(.16+.14*aRand.z)+br*.07+hv*(.03+.38*aRand.z*aRand.z))+n*push*.15+vec3(0.,1.,0.)*br*.05;
  float c=smoothstep(aRand.x*.5,aRand.x*.5+.5,uCollapse);
- vec3 target=aCore<.5?uCoreA:uCoreB;
+ vec3 target=aCore<.5?uCoreA:aCore<1.5?uCoreB:uCoreC;
  vec3 toT=target-pos;
  vec3 swirl=normalize(cross(toT,vec3(0.,1.,0.))+vec3(.001,0.,.002));
  vec3 cp=pos+toT*c+swirl*sin(c*3.14159)*(.3+.5*aRand.z)*length(toT)*.45;
@@ -86,11 +86,18 @@ export async function createGlobe(ctx, loader) {
   geo.setAttribute('aHome', new THREE.InstancedBufferAttribute(world.home, 3));
   geo.setAttribute('aSize', new THREE.InstancedBufferAttribute(world.size, 3));
   geo.setAttribute('aRand', new THREE.InstancedBufferAttribute(world.rand, 4));
+  // three cores (2026-11-03): the top cap (a third of the surface) falls into J.A.R.V.I.S. at the top, the rest into
+  // E.V. (left half) and H.O.M.E.R. (right half); world.js still splits west and east, so it is reassigned here
+  for (let i = 0; i < world.count; i++) {
+    const x = world.home[i * 3], y = world.home[i * 3 + 1], z = world.home[i * 3 + 2], l = Math.hypot(x, y, z) || 1;
+    world.core[i] = y / l > 1 / 3 ? 0 : x < 0 ? 1 : 2;
+  }
   geo.setAttribute('aCore', new THREE.InstancedBufferAttribute(world.core, 1));
 
   const U = {
     uPart: { value: 0 }, uCollapse: { value: 0 }, uDist: { value: 1.0 },
-    uCoreA: { value: new THREE.Vector3(-1.5, 0, 0) }, uCoreB: { value: new THREE.Vector3(1.5, 0, 0) },
+    uCoreA: { value: new THREE.Vector3(0, 1.5, 0) }, uCoreB: { value: new THREE.Vector3(-1.5, -0.8, 0) },
+    uCoreC: { value: new THREE.Vector3(1.5, -0.8, 0) },
     uSeam: { value: new THREE.Color(0.45, 0.7, 1.0) }, uSeamAmt: { value: 0 },
     uPtr: { value: [0, 1, 2, 3].map(() => new THREE.Vector3(0, 0, 1)) }, uPtrAmt: { value: [0, 0, 0, 0] },
     uBreath: { value: 0 }, uHover: { value: [0, 0, 0, 0] }
@@ -160,7 +167,7 @@ export async function createGlobe(ctx, loader) {
   const inv = new THREE.Matrix4(), localRay = new THREE.Ray(), unitSphere = new THREE.Sphere(new THREE.Vector3(), 1.02), hit = new THREE.Vector3();
   const lastHit = [null, null, null, null];
 
-  /* state: time, dt, part, collapse, position (Vector3), radius, coreA/coreB world positions, flash,
+  /* state: time, dt, part, collapse, position (Vector3), radius, coreA/coreB/coreC world positions, flash,
      rays (up to four world rays, one per slot: the mouse in slot 0, or each finger; null where none) */
   function update(s) {
     group.position.copy(s.position);
@@ -198,6 +205,7 @@ export async function createGlobe(ctx, loader) {
     U.uBreath.value = swell * (1 - Math.min(1, s.part * 4)) * (1 - s.collapse);
     group.worldToLocal(U.uCoreA.value.copy(s.coreA));
     group.worldToLocal(U.uCoreB.value.copy(s.coreB));
+    group.worldToLocal(U.uCoreC.value.copy(s.coreC));
     // seams: a faint glow even when closed, bright white-blue while parting, warming toward the cores while collapsing
     U.uSeam.value.setRGB(0.75 + 0.25 * s.collapse, 0.88 - 0.2 * s.collapse, 1.0 - 0.3 * s.collapse);
     U.uSeamAmt.value = (0.12 + Math.min(1, s.part * 1.6) * 1.5 + s.collapse * 0.8 + s.flash * 0.25) * (1 - smooth(0.93, 1, s.collapse));

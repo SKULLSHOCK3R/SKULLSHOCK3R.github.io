@@ -1,5 +1,5 @@
 /* The ring gate on the way to the ending, after igloo.inc's segmented stone rings (Robin, 2026-10-26: "add some 3d
-   rings rather than a whiteout transition"). As the camera dives into J.A.R.V.I.S.'s core (cores.js), three rings of
+   rings rather than a whiteout transition"). As the camera dives into the merged cores (cores.js), three rings of
    frosted stone segments assemble around it, segments flying in from outside, each ring turning on its own axis, rims
    glowing in the core's gold; the camera passes through them and the segments part as it does. The gate follows the
    core's position and size, and is driven by the scroll alone, so scrolling back plays it in reverse. */
@@ -97,19 +97,25 @@ export async function createRingGate(ctx, tint) {
     return { mat, u };
   }
 
-  // radii in core units (the hologram sphere is radius 1): segments get fewer and heavier toward the outside
+  // radii in core units (the hologram sphere is radius 1): segments get fewer and heavier toward the outside. The
+  // first ring is cut into three equal pieces, one for each core (Robin, 2026-11-03: "the first portal should be
+  // divided into 3 equal parts and each core should have one part floating around the centre"): each piece sits in
+  // its own holder, so it can float at its own core and close into the ring as the cores come together
   const R = rng(0x72696e67), rings = [];
-  [[1.1, 0.16, 0.18, 4, 0.2], [1.25, 0.2, 0.22, 6, -0.55], [1.4, 0.24, 0.26, 8, 0.85]].forEach(([rad, w, d, n, tilt], ri) => {
+  [[1.1, 0.16, 0.18, 3, 0.2], [1.25, 0.2, 0.22, 6, -0.55], [1.4, 0.24, 0.26, 8, 0.85]].forEach(([rad, w, d, n, tilt], ri) => {
     const ring = new THREE.Group();
     const { mat, u } = stone();
     const gap = 0.14 + R() * 0.06, step = 2 * Math.PI / n;
+    const holders = [];
     for (let k = 0; k < n; k++) {
-      const a0 = k * step + gap / 2, a1 = (k + 1) * step - gap / 2 - R() * 0.1;
+      // the three pieces of the first ring are cut equal (no random trim), so the closed ring is even
+      const a0 = k * step + gap / 2, a1 = (k + 1) * step - gap / 2 - (ri === 0 ? 0 : R() * 0.1);
       const seg = new THREE.Mesh(segment(rad, w, d, a0, a1), mat);
       seg.userData = { mid: (a0 + a1) / 2, tumble: (R() - 0.5) * 2.4 };
-      ring.add(seg);
+      if (ri === 0) { const h = new THREE.Group(); h.add(seg); group.add(h); holders.push(h); }
+      else ring.add(seg);
     }
-    ring.userData = { tilt, spin: (ri % 2 ? -1 : 1) * (0.35 + 0.2 * ri), mat, u, rad, w };
+    ring.userData = { tilt, spin: (ri % 2 ? -1 : 1) * (0.35 + 0.2 * ri), mat, u, rad, w, holders };
     group.add(ring);
     rings.push(ring);
   });
@@ -127,7 +133,9 @@ export async function createRingGate(ctx, tint) {
   /* Returns the portal: the last ring's opening on screen (x, y in NDC, r in half view heights); r -1 before it is
      born (the chamber stays hidden), Infinity once it has swept past the edges (the chamber is the whole view). */
   /* s.rest (0..1, while the cores are shown) and s.coreR (J.A.R.V.I.S.'s core radius, world): the first ring always
-     floats within his core (Robin, 2026-10-26), small and slowly turning, and is the one that grows out into the gate */
+     floats within the cores (Robin, 2026-10-26; one piece at each core since 2026-11-03), small and slowly turning, and
+     is the one that grows out into the gate. s.pieces: the three cores' world positions; s.merge: how far they have
+     come together (0 apart, 1 one core) */
   function update(s) {
     const rest = s.rest || 0;
     group.visible = (s.leave > 0.001 || rest > 0.01) && s.leave < 0.999;
@@ -143,6 +151,7 @@ export async function createRingGate(ctx, tint) {
       const last = ri === rings.length - 1, floater = ri === 0 && rest > 0.01;
       if (last && u >= 0.999) portalOut = { x: 0, y: 0, r: Infinity };
       ring.visible = (u > 0.001 || floater) && u < 0.999;
+      d.holders.forEach((h) => { h.visible = ring.visible; });
       if (!ring.visible) return;
       const grow = u * u;                                                 // slow at birth, rushing out at the end
       // sized by how it looks: from a point at the core to well past the edges of the view (radius 1.9 x half height);
@@ -170,10 +179,24 @@ export async function createRingGate(ctx, tint) {
         d.mat.opacity = Math.max(d.mat.opacity, rest * (1 - k));
       }
       d.mat.depthWrite = d.mat.opacity > 0.98;
-      ring.children.forEach((seg) => {                                    // the segments open apart a touch as it grows
+      const segs = d.holders.length ? d.holders.map((h) => h.children[0]) : ring.children;
+      segs.forEach((seg) => {                                             // the segments open apart a touch as it grows
         const sd = seg.userData, r = 0.05 * grow;
         seg.position.set(Math.cos(sd.mid) * r, Math.sin(sd.mid) * r, 0);
         seg.rotation.set(sd.tumble * 0.15 * grow, -sd.tumble * 0.1 * grow, 0);
+      });
+      // the first ring's pieces: each takes the ring's size and turn, sits at its own core while the cores are apart,
+      // and orbits that core's centre on its own; as the cores merge (s.merge, 0..1) the offsets and orbits run out,
+      // so the three close into the ring just as the camera reaches it
+      const merge = Math.min(1, Math.max(0, s.merge || 0));
+      d.holders.forEach((h, k) => {
+        h.scale.copy(ring.scale);
+        h.rotation.copy(ring.rotation);
+        const at = s.pieces && s.pieces[k];
+        if (at) h.position.set(at.x - s.pos.x, at.y - s.pos.y, at.z - s.pos.z); else h.position.set(0, 0, 0);
+        const free = 1 - merge;
+        h.rotation.z += free * (s.time * (0.45 + 0.12 * k) * (k % 2 ? -1 : 1) + k * 2.1);
+        h.rotation.x += free * 0.35 * Math.sin(s.time * 0.31 + k * 1.7);
       });
     });
     light.intensity = Math.max(2.5 * ease(s.leave / 0.2), 0.6 * rest) * (1 - ease((s.leave - 0.8) / 0.2));
