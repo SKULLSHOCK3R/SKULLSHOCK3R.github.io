@@ -40,7 +40,11 @@ void main(){
 };
 
 export function createPost(renderer, scene, camera) {
-  const composer = new EffectComposer(renderer);
+  // multisampled (2026-11-12: the globe's edges looked jagged; antialiased like the rest of the models): the scene, the globe's blocks among it, is drawn into a 4x multisampled half-float target, as
+  // the baked figures' frame is; ?msaa=0 to compare
+  const ms = new URLSearchParams(location.search).get('msaa');
+  const samples = ms === null ? 4 : Math.max(0, parseInt(ms, 10) || 0);
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples }));
   const renderPass = new RenderPass(scene, camera);
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.6, 0.8);
   const output = new OutputPass();

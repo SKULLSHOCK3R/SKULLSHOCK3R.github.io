@@ -8,14 +8,15 @@
    stylesheet lays the same text out as a plain page with a still picture. No network calls beyond our own files. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createPost } from './post.js?v=3';
-import { createOpening } from './opening.js?v=35';
+import { createPost } from './post.js?v=4';
+import { createOpening } from './opening.js?v=36';
 import { createGlobe } from './globe.js?v=41';
 import { createCores, mergeOf } from './cores.js?v=10';
 import { createEnding, ITEMS } from './ending.js?v=36';
 import { createRingGate } from './ringgate.js?v=13';
 import { stillSvg } from './figures.js?v=15';
 import { createSound } from './sound.js?v=11';
+import { createPlate } from './plate.js?v=1';
 
 const html = document.documentElement;
 html.setAttribute('data-app', '1');   // the module ran: index.html's watchdog leaves the scene layout alone
@@ -121,15 +122,25 @@ async function main() {
 
   const post = createPost(renderer, scene, camera);
   post.grade.uFade.value = 0;
+  if (new URLSearchParams(location.search).has('fps')) window.__post = post;   // checking aid, as window.__plate
   // the preloader (Robin, 2026-10-28, after igloo.inc's loading screen): every model and texture goes through three's
   // default loading manager, so its count drives the percentage; the cover lifts once they are all in and the first
   // frames are drawn, so nothing pops in under the visitor
   const cover = $('#loader'), pct = cover && $('.pct', cover);
-  const load = { loaded: 0, total: 0, shown: 0, lastAt: performance.now() };
+  // The baked opening (local preview, Robin 2026-11-11: "it's stuck on 99% for so long ... make it so it linearly
+  // rises and doesnt get stuck at 99%"): its figures are most of the wait and were not counted at all, so the count
+  // stood at 99 while they came in. They are counted in bytes as they land (ctx.loadBytes, below: baked.js is told
+  // the whole from bake_pack.py's list, and reports each piece): the scene's models and textures are the first part
+  // of the bar, those bytes the rest (BYTES_SHARE: about their share of the wait: on this PC the models are in after
+  // 0.4 s and the figures take the seconds after).
+  const BYTES_SHARE = 0.9, urlQ = new URLSearchParams(location.search);
+  const load = { loaded: 0, total: 0, shown: 0, lastAt: performance.now(), bytes: 0, bytesTotal: 0,
+    byBytes: (urlQ.get('mode') || 'baked') === 'baked' && !urlQ.has('noplate') };
   let lifted = false;   // the manifesto waits for the cover to lift
   const mgr = THREE.DefaultLoadingManager;
   const showPct = () => {
-    const p = load.total ? Math.floor(100 * load.loaded / load.total) : 0;
+    const items = load.total ? load.loaded / load.total : 0;
+    const p = Math.floor(100 * (load.byBytes ? (1 - BYTES_SHARE) * items + BYTES_SHARE * (load.bytesTotal ? Math.min(1, load.bytes / load.bytesTotal) : 0) : items));
     load.shown = Math.max(load.shown, Math.min(99, p));
     if (pct) pct.textContent = String(load.shown);
     if (cover) cover.style.setProperty('--p', (load.shown / 100).toFixed(2));
@@ -156,26 +167,71 @@ async function main() {
     return goStatic('scene build failed');
   }
   scene.add(opening.group, globe.group, cores.group, ending.group, gate.group);
+  // the ray-traced plate (plate.js; local preview 2026-11-11); ?noplate shows the page as it was
+  let plate = null;
+  if (!new URLSearchParams(location.search).has('noplate')) {
+    ctx.renderer = renderer;      // baked mode draws its own frame each frame (baked.js)
+    // the loading bar's bytes: expect(the whole), got(each piece as it lands)
+    ctx.loadBytes = { expect: (n) => { load.bytesTotal = n; showPct(); }, got: (n) => { load.bytes += n; seen(); showPct(); } };
+    try { plate = await createPlate(ctx); ctx.plate = plate; scene.add(plate.mesh, plate.occluder); if (window.console) console.info('ray-traced plate on'); }
+    catch (e) { load.byBytes = false; showPct(); if (window.console) console.info('ray-traced plate not used:', e && e.message); }
+  }
   scene.fog = new THREE.FogExp2(0x04060b, 0.05);   // only the chamber floor and pedestal use fog (other materials opt out)
 
   /* ---- DOM: layers, HUD, sheets, carousel ---- */
   const layers = { open: $('.layer-open'), globe: $('.layer-globe'), cores: $('.layer-cores'), end: $('.layer-end') };
   const spacer = $('.spacer');
   const hudLines = $('#hudlines');
+  // the labels' leader lines on a 2D canvas over the scene (2026-11-12): the SVG they were drawn in, its lines moved
+  // every frame, was repainted whole each frame at the screen's full size, and on the cores page that alone dropped the
+  // page from 160 to 135 fps (33 missed frames in 2.5 s; none with the lines hidden). The same colour, width and opacity
+  // drawn inside the WebGL canvas, after the post-processing (no layer at all over the canvas: any full-screen layer
+  // over it, the SVG or a 2D canvas, made the browser composite the whole screen each frame; on the cores page that held
+  // the page at 135 fps where the GPU needed 3 ms)
+  hudLines.style.display = 'none';
+  const hudList = [];
+  const newLine = () => { const l = { x1: 0, y1: 0, x2: 0, y2: 0, a: 0 }; hudList.push(l); return l; };
+  let hudScene = null, hudCam = null, hudPos = null, hudCol = null, hudGeo = null;
+  const hudRGB = new THREE.Color().setStyle('rgb(190, 210, 255)');
+  function drawHudLines() {
+    const n = hudList.length;
+    if (!hudScene) {
+      hudGeo = new THREE.BufferGeometry();
+      hudPos = new THREE.BufferAttribute(new Float32Array(Math.max(1, n) * 6), 3).setUsage(THREE.DynamicDrawUsage);
+      hudCol = new THREE.BufferAttribute(new Float32Array(Math.max(1, n) * 8), 4).setUsage(THREE.DynamicDrawUsage);
+      hudGeo.setAttribute('position', hudPos); hudGeo.setAttribute('color', hudCol);
+      const m = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
+      const seg = new THREE.LineSegments(hudGeo, m); seg.frustumCulled = false;
+      hudScene = new THREE.Scene(); hudScene.add(seg);
+      hudCam = new THREE.OrthographicCamera(0, 1, 0, 1, -1, 1);
+    }
+    let any = false;
+    for (let i = 0; i < n; i++) {
+      const l = hudList[i], a = l.a > 0.001 ? l.a * 0.75 : 0;
+      if (a) any = true;
+      hudPos.setXYZ(i * 2, l.x1, l.y1, 0); hudPos.setXYZ(i * 2 + 1, l.x2, l.y2, 0);
+      hudCol.setXYZW(i * 2, hudRGB.r, hudRGB.g, hudRGB.b, a); hudCol.setXYZW(i * 2 + 1, hudRGB.r, hudRGB.g, hudRGB.b, a);
+    }
+    if (!any) return false;
+    hudPos.needsUpdate = hudCol.needsUpdate = true;
+    if (hudCam.right !== W || hudCam.bottom !== H) { hudCam.right = W; hudCam.bottom = H; hudCam.updateProjectionMatrix(); }
+    return true;
+  }
+  function renderHudLines() {
+    if (!drawHudLines()) return;
+    const ac = renderer.autoClear;
+    renderer.autoClear = false; renderer.setRenderTarget(null);
+    renderer.render(hudScene, hudCam);
+    renderer.autoClear = ac;
+  }
   const globeTags = globe.labels.map((L) => {
     const li = document.createElement('li');
     li.className = 'tag' + (L.gold ? ' gold' : '');
     li.textContent = L.name;
     $('.hud-globe').appendChild(li);
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    hudLines.appendChild(line);
-    return { el: li, line };
+    return { el: li, line: newLine() };
   });
-  const coreItems = $$('.hud-cores .hud-item').map((el) => {
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    hudLines.appendChild(line);
-    return { el, line, key: el.getAttribute('data-item') };
-  });
+  const coreItems = $$('.hud-cores .hud-item').map((el) => ({ el, line: newLine(), key: el.getAttribute('data-item') }));
   const sheet = $('#sheet'), sheetBody = $('.sheet-body', sheet), sheetClose = $('.sheet-close', sheet);
   let sheetOpenFrom = null, smearPulse = 0;
   function openSheet(key, from) {
@@ -222,7 +278,32 @@ async function main() {
   // 120 Hz screen); when frames take longer than the display's interval, render at a lower pixel ratio, and raise it
   // again after a few seconds with headroom
   const perf = { deltas: [], interval: 0, avg: 0, q: 1, acc: 0, good: 0 };
+  // checking aids (2026-11-12): ?q=1 holds the drawing at full resolution (the governor does nothing); ?gpu times the
+  // GPU's work per frame, the baked figures' draw (in plate.update) and the rest, into window.__gpu
+  const holdQ = new URLSearchParams(location.search).get('q');
+  const gpuT = (() => {
+    if (!new URLSearchParams(location.search).has('gpu')) return null;
+    const gl = ctx.renderer.getContext(), ext = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    if (!ext) return null;
+    const open = [], out = { plate: [], post: [] };
+    window.__gpu = out;
+    return {
+      begin() { const q = gl.createQuery(); gl.beginQuery(ext.TIME_ELAPSED_EXT, q); return q; },
+      end(q, kind) { gl.endQuery(ext.TIME_ELAPSED_EXT); open.push([q, kind]); },
+      poll() {
+        for (let i = open.length - 1; i >= 0; i--) {
+          const [q, kind] = open[i];
+          if (gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE) && !gl.getParameter(ext.GPU_DISJOINT_EXT)) {
+            out[kind].push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6); gl.deleteQuery(q); open.splice(i, 1);
+            if (out[kind].length > 600) out[kind].shift();
+          }
+        }
+      }
+    };
+  })();
+  if (holdQ) perf.q = Math.min(1, Math.max(0.3, parseFloat(holdQ) || 1));
   function governor(ms) {
+    if (holdQ) return;
     if (!(ms > 0 && ms < 100)) return;              // a hidden tab or a stall says nothing about the frame cost
     if (!perf.interval) {
       perf.deltas.push(ms);
@@ -239,7 +320,10 @@ async function main() {
     // as well?"); until then they settled for 60 on a 120 Hz screen. Sharpness is kept by the floor below
     const budget = perf.interval;
     // floor: 0.7 of 2x on phones (about 1.4x, still sharp), 0.5 elsewhere as before, so a weak GPU keeps its room
-    if (perf.avg > budget * 1.12) { q = Math.max(ctx.phone ? 0.7 : 0.5, q - 0.1); perf.good = 0; }
+    // (2026-11-12, igloo.inc's way: theirs steps in below 30 fps): only below 60 fps, not at a frame or two over the
+    // display's interval. Stepping the resolution down and up again every second at 135 fps on the cores page read as
+    // tearing and glitches (Robin: "the screen tears and glitchs ... as i ... scroll through the final rings")
+    if (perf.avg > Math.max(budget * 1.12, 1000 / 60)) { q = Math.max(ctx.phone ? 0.7 : 0.5, q - 0.1); perf.good = 0; }
     else if (perf.avg < budget * 1.03 && q < 1 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
     if (q !== perf.q) { perf.q = q; layout(); }
   }
@@ -251,8 +335,14 @@ async function main() {
     W = innerWidth; H = innerHeight;
     // phones render at up to 2x too (Robin, 2026-10-28, comparing with igloo.inc on a phone: at 1.5x, and the
     // governor's floor below that, the scene drew at well under the screen's own resolution)
-    dpr = Math.min(devicePixelRatio || 1, 2) * perf.q;
+    // the phone and desktop sets are rendered for their own screen shape: crossing the line after the set has loaded
+    // (a window or emulator resized) loads the page again with the set for the new shape, rather than stretching
+    // the phone's portrait frame over a wide screen (Robin, 2026-11-12: "i can only see luffy's feet")
+    if (W > 1 && ctx.phoneSet !== undefined && (W < 760) !== ctx.phoneSet) { location.reload(); return; }
     if (W > 1) ctx.phone = W < 760;
+    // phones at 1.5x at most, as igloo.inc draws them (2026-11-12: its code caps a pixel ratio over 2 at 1.5); desktops
+    // at their own up to 2x
+    dpr = Math.min(devicePixelRatio || 1, ctx.phone ? 1.5 : 2) * perf.q;
     ctx.aspect = W / H;
     camera.aspect = ctx.aspect;
     camera.updateProjectionMatrix();
@@ -496,6 +586,13 @@ async function main() {
   const sp = { x: 0, y: 0, z: 0 };
   let time = 0, last = performance.now(), fade = 0, hoverCore = -1;
   let pendingJump = debugT;
+  const farP = new THREE.Vector3();
+  let fpsBox = null, fpsN = 0, fpsAcc = 0, fpsLast = performance.now();
+  if (params.has('fps')) {
+    fpsBox = document.createElement('div');
+    fpsBox.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;font:12px monospace;color:#9fe;background:rgba(0,0,0,.6);padding:4px 6px;pointer-events:none';
+    document.body.appendChild(fpsBox);
+  }
   if (debugT !== null) {
     fade = 1;
     html.classList.add('debug');
@@ -539,6 +636,14 @@ async function main() {
       if (loopT > 1.5) loopT = -1;
     }
     driftCamera(dt, cur);
+    // the rendered picture follows the camera (Robin, 2026-11-11: "the camera shift with the mouse is missing all the
+    // way down till the core animation"): the turn moves it as it moves the sky (the far point's shift, as opening.js
+    // works it out), and the sideways drift from the globe on moves it as a backdrop 14 units away would move; set
+    // before anything is placed on it this frame, so the globe and Imu's eyes stay on it
+    if (plate) {
+      farP.set(0, 0, -1000).project(camera);
+      plate.setPan(-farP.x * 0.5 + camera.position.x / (2 * ctx.halfW(-8)), -farP.y * 0.5 + camera.position.y / (2 * ctx.halfH(-8)));
+    }
     const t = cur;
     const lift = smooth(0, 1, t), part = clamp(t - 1, 0, 1), collapse = clamp(t - 2, 0, 1), toEnd = clamp(t - 3, 0, 1);
     // the chamber comes in behind the ring gate, already in its overhead view, so the last ring frames it before the
@@ -572,8 +677,13 @@ async function main() {
 
     // globe: from Luffy's hand to the centre, then parting, then the collapse into the cores
     const viewH = 2 * ctx.halfH(0), minDim = Math.min(W, H);
-    const heroR = Math.max(24, 0.075 * minDim) / H * viewH, mainR = Math.min(0.29 * viewH, 0.4 * viewH * ctx.aspect);
+    // (with the plate, the globe in his hand grows with the picture's 6 % enlargement, so it stays his size)
+    const heroR = Math.max(24, 0.075 * minDim) / H * viewH * (plate ? plate.zoom : 1), mainR = Math.min(0.29 * viewH, 0.4 * viewH * ctx.aspect);
     opening.handWorld(handPos);
+    if (plate) {   // the live globe over the rendered one: the render's globe centre on this screen, on the plane z = 0
+      const gs = plate.globeScreen();
+      plate.worldAt(gs[0], gs[1], 0, handPos);   // on the picture as the camera now sees it, so it moves only with the view
+    }
     globePos.set(0, ctx.phone ? 0.12 : 0.04, 0).lerp(handPos, 1 - lift);
     opening.setGlobe(globePos, (1 - lift) * figures * globe.light);    // its light in the water and on Luffy, as it shines
     // three cores in a triangle (2026-11-03): a touch smaller, and on a phone held upright small enough that the
@@ -582,6 +692,11 @@ async function main() {
     cores.group.visible = coresVisible;
     const coresLeave = smooth(0, 0.5, toEnd);
     cores.update({ time, dt, radius: coreR, reveal: smooth(0.55, 0.95, collapse), leave: coresLeave });
+    const gq = gpuT && plate ? gpuT.begin() : null;
+    if (plate) plate.update({ t, aspect: ctx.aspect, fig: figures, lift, flash: flash * (1 - 0.6 * smooth(2.2, 2.9, t)), boltKey: opening.boltKey,
+      globeLight: globe.light, dark: (1 - 0.3 * lift) * (1 - 0.6 * smooth(2.2, 2.9, t)), chamber: smooth(3.52, 3.62, t),
+      cores: coresVisible ? cores.cores.map((c) => c.mat.uniforms.uAlpha.value) : [0, 0, 0] });
+    if (gq) gpuT.end(gq, 'plate');
     cores.worldPos(0, coreA); cores.worldPos(1, coreB); cores.worldPos(2, coreC);
     // the ring gate assembles round J.A.R.V.I.S.'s core as the camera dives into it (ringgate.js)
     // late in the dive, and carried across the switch, so the camera is still passing through the rings as the
@@ -685,13 +800,20 @@ async function main() {
     sound.update({ t, dt, time, vel, flash, flashScale: 1 - 0.6 * smooth(2.2, 2.9, t), globeLight: globe.light, globeShown: globe.group.visible,
       collapse, toEnd, coreReveal: coresVisible ? smooth(0.55, 0.95, collapse) * (1 - smooth(0, 0.5, toEnd)) : 0,
       end: smooth(0.55, 0.9, toEnd), loopWhite });
+    if (fpsBox) {   // ?fps: the real frame rate and the size the canvas draws at (local preview, 2026-11-11)
+      fpsN++; fpsAcc += now - fpsLast; fpsLast = now;
+      if (fpsAcc > 500) {
+        fpsBox.textContent = (1000 * fpsN / fpsAcc).toFixed(0) + ' fps, ' + canvas.width + 'x' + canvas.height + ' (quality ' + perf.q.toFixed(2) + ')' + (plate ? ', plate on' : '');
+        fpsN = 0; fpsAcc = 0;
+      }
+    }
     if (fade > 0.2 && lifted && !html.classList.contains('ready')) html.classList.add('ready');
-    post.composer.render(dt);
+    if (gpuT) { const pq = gpuT.begin(); post.composer.render(dt); gpuT.end(pq, 'post'); gpuT.poll(); }
+    else post.composer.render(dt);
+    renderHudLines();
   }
   function setLine(line, x1, y1, x2, y2, a) {
-    line.setAttribute('x1', x1.toFixed(1)); line.setAttribute('y1', y1.toFixed(1));
-    line.setAttribute('x2', x2.toFixed(1)); line.setAttribute('y2', y2.toFixed(1));
-    line.style.opacity = a.toFixed(3);
+    line.x1 = x1; line.y1 = y1; line.x2 = x2; line.y2 = y2; line.a = a;
   }
   requestAnimationFrame(frame);
   // lift the cover once every asset is in, or once nothing new has arrived for 0.6 s (the manager can keep one internal

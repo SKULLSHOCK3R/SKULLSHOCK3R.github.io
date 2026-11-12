@@ -56,7 +56,9 @@ nav.site a[aria-current="page"] { background: #17335a; border-color: var(--cyan)
 
 .card {
   margin: 0 0 14px; padding: 22px 24px 20px; border: 1px solid var(--edge); border-radius: 14px;
-  background: var(--panel); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  /* no backdrop blur (2026-11-12): behind an 88 % opaque panel it barely showed, and over the live scene it cost
+     32 missed frames in 3 s of the globe's scroll at 160 Hz (none without) */
+  background: var(--panel);
   box-shadow: 0 0 28px rgba(40, 140, 255, 0.18);
 }
 .card > :last-child { margin-bottom: 0; }

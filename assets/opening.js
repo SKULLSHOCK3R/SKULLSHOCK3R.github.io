@@ -130,19 +130,42 @@ void main(){
 
 const FOG_FS = /* glsl */`
 precision highp float;
-uniform vec2 uRes,uPan;uniform float uTime,uFlash,uFade;varying vec2 vUv;
+uniform vec2 uRes,uPan;uniform float uTime,uFlash,uFade,uRain;varying vec2 vUv;
+// uBank: a denser bank of the same fog along the sea at the height of Imu's base and thickest round him (Robin,
+// 2026-11-12: "look at the fog we use in our current version, maybe use a stronger version of that, the aim is to conceal
+// the base of imu"); uBankAt: his base on this screen (x, y), 0 strength without the ray-traced plate
+uniform float uBank;uniform vec2 uBankAt;
 ${NOISE2}${LIN}
 void main(){vec2 uv=vUv+uPan;float asp=uRes.x/uRes.y;vec2 p=vec2(uv.x*asp,uv.y);
  float f=fbm3(vec2(uv.x*asp*1.8+uTime*.045,uv.y*3.5-uTime*.015));
  float f2=fbm3(vec2(uv.x*asp*3.6-uTime*.07,uv.y*6.)+f*1.4);
  float a=smoothstep(.45,0.,uv.y)*(.25+.75*f2)*.7*uFade;
+ float b=0.;vec3 bc=vec3(0.);
+ if(uBank>0.){
+  // from a little above his base down through the water to the shore (his base and its image in the sea), even through
+  // that height, in the grey-blue of the water and haze round him (Robin, 2026-11-12: "i can still see his base": the
+  // site's dark fog colour hid nothing over his dark shroud)
+  // as the current site has it (Robin, 2026-11-12: "please look at our current version"): a low dark mist lying on
+  // the waterline where his shroud meets the sea, so the edge melts into the water, thinning down over his image in it
+  // (in the colour of the sea round him, so his dark shroud and its dark image melt into the water rather than into a
+  // darker band)
+  // (risen well up his lower body, Robin 2026-11-12: "i can still see a purple band on imu's base": his violet rim
+  // runs down to the water; flat at full strength from just below the waterline to a little above it)
+  float up=uv.y-uBankAt.y;
+  // heaviest where his fade ends, just under the horizon behind him (uBankAt), thinning down to his base and the water
+  // (Robin, 2026-11-12: "the fog on imu is supposed to be the heaviest where the transition stops"), gone above it
+  float band=up>0.?exp(-pow(up/.022,2.)):exp(-pow(up/.075,2.));
+  float atImu=.2+.8*exp(-pow((uv.x-uBankAt.x)*asp/.4,2.));
+  b=min(.95,band*atImu*(.75+.25*f2)*uBank)*uFade;
+  bc=vec3(.050,.060,.078)+vec3(.17,.10,.22)*uFlash*.6;}
  vec3 c=vec3(.028,.032,.040)+vec3(.17,.10,.22)*uFlash*.6;
+ if(b>0.){c=(c*a+bc*b)/max(a+b,1e-4);a=max(a,b);}
  float r=0.;
  for(int i=0;i<2;i++){float fi=float(i);
   vec2 q=vec2(p.x*(30.+fi*18.)+p.y*(4.+fi*3.),p.y*(3.2+fi*1.4)+uTime*(4.+fi*1.8));
   vec2 id=floor(q);float h=hash(id+fi*3.3);vec2 fr=fract(q);
   r+=smoothstep(.04,0.,abs(fr.x-h))*smoothstep(0.,.3,fr.y)*smoothstep(1.,.5,fr.y)*step(.86,h)*(.09-fi*.03);}
- r*=uFade;
+ r*=uFade*uRain;
  vec3 rc=vec3(.3,.34,.42)*r*(1.+uFlash*2.);
  gl_FragColor=vec4(c*a+rc,a+r*.4);}`;
 
@@ -293,7 +316,8 @@ export async function createOpening(ctx) {
   const fog = new THREE.ShaderMaterial({
     vertexShader: FULL_VS, fragmentShader: FOG_FS, transparent: true,
     blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
-    uniforms: { uRes: { value: new THREE.Vector2(1, 1) }, uPan: { value: new THREE.Vector2() }, uTime: { value: 0 }, uFlash: { value: 0 }, uFade: { value: 1 } }
+    uniforms: { uRes: { value: new THREE.Vector2(1, 1) }, uPan: { value: new THREE.Vector2() }, uTime: { value: 0 }, uFlash: { value: 0 }, uFade: { value: 1 }, uRain: { value: 1 },
+      uBank: { value: 0 }, uBankAt: { value: new THREE.Vector2(0.22, 0.4) } }
   });
   const fogMesh = fullscreen(fog, 50);
   group.add(fogMesh);
@@ -389,7 +413,7 @@ export async function createOpening(ctx) {
   }).catch((e) => { if (window.console) console.info('rock not used:', e.message); });
 
   // ---- lightning clock ----
-  let flash = 0, flashX = 0.5, flashT = 9, nextFlash = 2.2, bolt = null, boltDrawn = false;
+  let flash = 0, flashX = 0.5, flashT = 9, nextFlash = 2.2, bolt = null, boltDrawn = false, boltKey = 'a';
   function makeBolt(W, H) {
     let x = flashX * W, y = -10;
     const end = H * (0.42 + Math.random() * 0.25), main = [[x, y]], branches = [];
@@ -412,9 +436,9 @@ export async function createOpening(ctx) {
     if (t > 0.27) a = Math.max(a, 0.45 * Math.exp(-(t - 0.27) * 9));
     return a;
   }
-  function drawBolt(W, H) {
+  function drawBolt(W, H, full) {
     bctx.clearRect(0, 0, W, H);
-    if (!bolt || flash < 0.03) return;
+    if (!bolt || (!full && flash < 0.03)) return;
     bctx.lineCap = 'round'; bctx.lineJoin = 'round';
     // bright purple lightning (Robin, 2026-10-27): a wide violet glow under a hot white-lilac core
     const path = (pts, width) => {
@@ -424,7 +448,23 @@ export async function createOpening(ctx) {
       for (let i = 1; i < pts.length; i++) bctx.lineTo(pts[i][0], pts[i][1]);
       bctx.stroke();
     };
-    const a = Math.min(1, flash * 1.4);
+    const a = full ? 1 : Math.min(1, flash * 1.4);
+    if (bolt.rendered) {
+      // the rendered bolt's channels (main 0, forks 1 and 2), thin and sharp, a faint violet sheath round the main one
+      const px = (pts) => pts.map(([x, y]) => [x * W, (1 - y) * H]);
+      const k = H / 1080;
+      bctx.shadowColor = 'rgba(185,80,255,1)'; bctx.shadowBlur = 12 * k;
+      bolt.rendered.forEach((c) => {
+        bctx.strokeStyle = 'rgba(200,140,255,' + a * (c.level ? 0.35 : 0.6) + ')';
+        path(px(c.pts), (c.level === 0 ? 3.2 : c.level === 1 ? 1.8 : 1.1) * k);
+      });
+      bctx.shadowBlur = 3 * k; bctx.shadowColor = 'rgba(230,200,255,1)';
+      bolt.rendered.forEach((c) => {
+        bctx.strokeStyle = 'rgba(250,240,255,' + a * (c.level ? 0.8 : 1) + ')';
+        path(px(c.pts), (c.level === 0 ? 1.3 : c.level === 1 ? 0.8 : 0.55) * k);
+      });
+      return;
+    }
     bctx.shadowColor = 'rgba(185,80,255,1)'; bctx.shadowBlur = 30;
     bctx.strokeStyle = 'rgba(175,85,255,' + a * 0.85 + ')';
     path(bolt.main, 7);
@@ -443,16 +483,25 @@ export async function createOpening(ctx) {
     flashT += s.dt;
     if ((nextFlash -= s.dt) <= 0) {
       nextFlash = 3 + Math.random() * 6; flashT = 0; flashX = 0.15 + Math.random() * 0.7;
-      const bw = Math.min(960, Math.round(W / 2)), bh = Math.min(600, Math.round(H / 2));
+      const P = ctx.plate;
+      // with the ray-traced plate the strike is one of its three rendered bolts (its light is in the plate's pass):
+      // the line is drawn sharp, here, along the bolt's own path on screen, over the render's softer one
+      const bw = P ? Math.min(1920, W) : Math.min(960, Math.round(W / 2)), bh = P ? Math.min(1080, H) : Math.min(600, Math.round(H / 2));
       if (boltCanvas.width !== bw || boltCanvas.height !== bh) { boltCanvas.width = bw; boltCanvas.height = bh; }
-      bolt = makeBolt(bw, bh);
+      if (P) {
+        const keys = Object.keys(P.bolts), key = keys[Math.floor(Math.random() * keys.length)];
+        boltKey = key; flashX = P.bolts[key].flashx;
+        bolt = { rendered: P.bolts[key].paths.map((p) => ({ level: p.level, pts: p.screen.map(([x, y]) => P.toScreen(x, y)) })) };
+      } else bolt = makeBolt(bw, bh);
+      // drawn once a strike, at full strength, and faded by the layer's opacity below (2026-11-12): redrawn and sent to
+      // the GPU every frame of the 1.2 s flash, the 1920 x 1080 canvas with its blurred glow cost runs of 19 ms frames
+      // on every strike (Robin: "a lot of flashing screens ... the screen tears and glitchs")
+      drawBolt(boltCanvas.width, boltCanvas.height, true);
+      boltTex.needsUpdate = true;
+      boltDrawn = true;
     }
     flash = flashT < 1.2 ? flashLevel(flashT) : 0;
-    if (flash > 0.03 || boltDrawn) {
-      drawBolt(boltCanvas.width, boltCanvas.height);
-      boltTex.needsUpdate = true;
-      boltDrawn = flash > 0.03;
-    }
+    boltMat.opacity = Math.min(1, flash * 1.4);
 
     // where the camera now points, as a shift of the backdrop: a far point straight ahead, projected (Robin,
     // 2026-10-27: "camera moves and models stay stuck")
@@ -460,6 +509,7 @@ export async function createOpening(ctx) {
     pan.set(-panP.x * 0.5, -panP.y * 0.5);
     sky.uniforms.uPan.value.copy(pan);
     fog.uniforms.uPan.value.copy(pan);
+    skyMesh.visible = !ctx.plateCovers;          // hidden behind the ray-traced plate: not drawn (plate.js)
     sky.uniforms.uRes.value.set(W, H);
     sky.uniforms.uTime.value = s.time;
     sky.uniforms.uFlash.value = flash * s.flashScale;
@@ -472,12 +522,22 @@ export async function createOpening(ctx) {
     fog.uniforms.uTime.value = s.time;
     fog.uniforms.uFlash.value = flash;
     fog.uniforms.uFade.value = s.fogFade;
+    // the ray-traced plate has its own rain: the page's front rain over it was a second layer (Robin, 2026-11-11)
+    fog.uniforms.uRain.value = ctx.plate ? 0 : 1;
+    // the bank at Imu's base, over the ray-traced plate: his base in the render's picture (meta imu figure_frame:
+    // x 0.236, the sea line at his foot 0.385 up), on this screen as the plate shows it, in this layer's own panned uv
+    if (ctx.plate && ctx.plate.screenNow) {
+      const at = ctx.plate.screenNow(0.236, 0.452), bq = new URLSearchParams(location.search).get('bank');
+      fog.uniforms.uBankAt.value.set(at[0] + pan.x, at[1] + pan.y);
+      fog.uniforms.uBank.value = bq === null ? 0.25 : parseFloat(bq);   // very light (Robin, 2026-11-12: "keep it very very light")
+    } else fog.uniforms.uBank.value = 0;
     fogMesh.visible = s.fogFade > 0.01;
 
     // bolt quad covers the view at its depth
     const bz = boltMesh.position.z, hh = ctx.halfH(bz), hw = ctx.halfW(bz);
     boltMesh.scale.set(hw, hh, 1);
-    boltMesh.visible = s.figures > 0.01 && flash > 0.03;
+    // (with the plate the storm stays behind the globe and the cores, so its bolts do too)
+    boltMesh.visible = (s.figures > 0.01 || (ctx.plate && s.chamber < 0.5)) && flash > 0.03;
 
     // figures: bottom-aligned planes sized from the view height at their depth
     const figOpacity = s.figures;
@@ -534,6 +594,25 @@ export async function createOpening(ctx) {
       const ru = imuRefl.material.uniforms, iu = imu.material.uniforms;
       ['map', 'uPacked', 'uPackW', 'uAlphaX', 'uSea', 'uTime', 'uFlash', 'uOpacity'].forEach((k) => { ru[k].value = iu[k].value; });
       ru.uFlashDir.value.copy(iu.uFlashDir.value);
+      const P = ctx.plate;
+      if (P) {
+        // the ray-traced plate shows Luffy, the rock, Imu and his reflection: their planes stay placed (the globe's
+        // hand position and the shadow maths read them) but draw nothing; Imu's eyes and glow sit on the rendered
+        // Imu, in the frames the render wrote down for them
+        luffy.material.uniforms.uOpacity.value = imu.material.uniforms.uOpacity.value = ru.uOpacity.value = 0;
+        rockMat.uniforms.uOpacity.value = 0;
+        // placed through the camera as it is now, on the picture as it is shown now (moved with the view, not over it)
+        const z = imu.position.z;
+        const put = (m, f, sc) => {
+          const zz = z + (m === eyes ? 0.01 : 0.005);
+          const a = P.screenNow(f[0], f[1]), b = P.screenNow(f[2], f[3]);
+          P.worldAt(a[0], a[1], zz, cA); P.worldAt(b[0], b[1], zz, cB);
+          m.position.set((cA.x + cB.x) / 2, (cA.y + cB.y) / 2, zz);
+          m.scale.set((cB.x - cA.x) * sc, (cB.y - cA.y) * sc, 1);
+        };
+        put(eyes, P.eyes, 1);
+        put(glow, P.glow, bs);
+      }
     }
   }
 
@@ -587,7 +666,7 @@ export async function createOpening(ctx) {
 
   return {
     group, update, handWorld, setGlobe,
-    get flash() { return flash; }, get flashX() { return flashX; }
+    get flash() { return flash; }, get flashX() { return flashX; }, get boltKey() { return boltKey; }, get pan() { return pan; }
   };
 }
 

@@ -16,11 +16,12 @@ One fullscreen three.js scene on a scroll-driven timeline (three.js 0.186.1, ven
 | `figures.js` | Luffy and Imu: their video loops and stills (HD on phones, 4K on large screens), frames, hover point and Imu's eyes. |
 | `ending.js`, `shapes.js` | The chamber: baked pedestal (`assets/models/pedestal.glb`), rings, light cone, a glass vial, and the grain sculptures (Luffy, the Straw Hat skull and crossbones and the envelope, from 3D models sampled into `assets/models/*-points.bin`; the flat drawings and `assets/luffy-mask.png` are the fallback) with a GPGPU push-and-spring simulation. |
 | `post.js`, `glsl.js` | Bloom, output, and the grade pass (chromatic smear, grain, vignette, whiteout); shared GLSL noise. |
+| `plate.js`, `baked.js` | The opening as a ray-traced scene (rendered in Blender Cycles), drawn live: Luffy, Imu and the rock as meshes from `assets/scene/baked-4k` (desktop) or `baked-phone` (screens under 760 px wide), with their light baked into KTX2 lightmaps (Luffy, the rock) or taken from the render's own pixels (Imu); live rain, ripples and lightning over a calm backdrop. `manifest.json` lists both sets. Large figure packs are stored in parts (`luffy.pack.0`, ...) named under `split` in that set's `figures.json`. |
 | `storm.css` | Document layout by default (no JS, no WebGL2, reduced motion) and the fixed-layer layout under `html.gl`. |
 | `sound.js` | Optional sound, synthesised in the browser (no audio files): a generative soft-piano score with quiet rain, thunder, the globe's breath, the cores, the ring gate and the chamber. Off until the Sound switch is pressed; the choice is remembered in this browser (`localStorage`, no cookie) and resumes at the next visit's first click or key press. |
 
 Plate slot: drop a photoreal still or clip at `assets/plates/hero.jpg` or `assets/plates/hero.mp4` and name it in `index.html` (`<meta name="hero-plate" content="assets/plates/hero.mp4">`); the opening uses it under the rain, lightning and fog.
 
-Test switches (query string, for screenshots only): `?t=<page>` jumps the timeline (0 to 4), `&still` freezes scroll effects, `&shape=1|2` starts the ending on the Jolly Roger or the envelope, `?static=1` forces the plain page, `?pany=-2` holds the opening view low (to check Luffy's feet on the rock).
+Test switches (query string, for screenshots only): `?t=<page>` jumps the timeline (0 to 4), `&still` freezes scroll effects, `&shape=1|2` starts the ending on the Jolly Roger or the envelope, `?static=1` forces the plain page, `?pany=-2` holds the opening view low (to check Luffy's feet on the rock), `?fps` shows the frame rate.
 
 The two other pages: `privacy.html` (the H.I.V.E. privacy policy, its own inline styles) and `404.html` (the earlier `site.css` and `scene.js`).
