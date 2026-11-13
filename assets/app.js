@@ -8,7 +8,7 @@
    stylesheet lays the same text out as a plain page with a still picture. No network calls beyond our own files. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createPost } from './post.js?v=4';
+import { createPost } from './post.js?v=5';
 import { createOpening } from './opening.js?v=36';
 import { createGlobe } from './globe.js?v=41';
 import { createCores, mergeOf } from './cores.js?v=10';
@@ -323,7 +323,16 @@ async function main() {
     // (2026-11-12, igloo.inc's way: theirs steps in below 30 fps): only below 60 fps, not at a frame or two over the
     // display's interval. Stepping the resolution down and up again every second at 135 fps on the cores page read as
     // tearing and glitches (Robin: "the screen tears and glitchs ... as i ... scroll through the final rings")
-    if (perf.avg > Math.max(budget * 1.12, 1000 / 60)) { q = Math.max(ctx.phone ? 0.7 : 0.5, q - 0.1); perf.good = 0; }
+    if (ctx.phone) {
+      // phones start at the screen's own sharpness and step down only while frames miss the display's rate (Robin,
+      // 2026-11-12: "how would make it look way better without cutting out performance"; his 2026-10-28 choice was 2x,
+      // igloo's cap 1.5x drew the globe soft), never below about 1.3x. A step up is taken only when the frame cost,
+      // scaled by the pixels the step adds, still fits well inside the display's interval, so it does not step down
+      // and up again every second (that read as tearing on the desktop, 2026-11-12)
+      const floor = Math.min(1, 1.3 / Math.max(1, devicePixelRatio || 1));
+      if (perf.avg > budget * 1.15) { q = Math.max(floor, q - 0.1); perf.good = 0; }
+      else if (q < 1 && perf.avg * Math.pow(Math.min(1, q + 0.05) / q, 2) < budget * 0.9 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
+    } else if (perf.avg > Math.max(budget * 1.12, 1000 / 60)) { q = Math.max(0.5, q - 0.1); perf.good = 0; }
     else if (perf.avg < budget * 1.03 && q < 1 && ++perf.good >= 4) { q = Math.min(1, q + 0.05); perf.good = 0; }
     if (q !== perf.q) { perf.q = q; layout(); }
   }
@@ -333,16 +342,14 @@ async function main() {
   let underscroll = 0, loopTo = 0;
   function layout() {
     W = innerWidth; H = innerHeight;
-    // phones render at up to 2x too (Robin, 2026-10-28, comparing with igloo.inc on a phone: at 1.5x, and the
-    // governor's floor below that, the scene drew at well under the screen's own resolution)
     // the phone and desktop sets are rendered for their own screen shape: crossing the line after the set has loaded
     // (a window or emulator resized) loads the page again with the set for the new shape, rather than stretching
     // the phone's portrait frame over a wide screen (Robin, 2026-11-12: "i can only see luffy's feet")
     if (W > 1 && ctx.phoneSet !== undefined && (W < 760) !== ctx.phoneSet) { location.reload(); return; }
     if (W > 1) ctx.phone = W < 760;
-    // phones at 1.5x at most, as igloo.inc draws them (2026-11-12: its code caps a pixel ratio over 2 at 1.5); desktops
-    // at their own up to 2x
-    dpr = Math.min(devicePixelRatio || 1, ctx.phone ? 1.5 : 2) * perf.q;
+    // phones at the screen's own pixel ratio, the governor stepping down from there (above); desktops at their own up
+    // to 2x
+    dpr = Math.min(devicePixelRatio || 1, ctx.phone ? 4 : 2) * perf.q;
     ctx.aspect = W / H;
     camera.aspect = ctx.aspect;
     camera.updateProjectionMatrix();
