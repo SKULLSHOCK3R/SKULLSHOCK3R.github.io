@@ -132,7 +132,7 @@ export async function createPlate(ctx, base = 'assets/scene/') {
   // the baked version is the site's own (Robin, 2026-11-12: "she's ready to replace the live site"); ?mode=video for
   // the video version, which stays local
   if ((q.get('mode') || 'baked') === 'baked') {
-    const { createBaked } = await import('./baked.js?v=1');
+    const { createBaked } = await import('./baked.js?v=2');
     B = await createBaked(ctx, base + 'baked-' + (ctx.phone ? 'phone' : '4k') + '/');
   } else {
     O = { b: videoTex(base + fmt.opening.base), l: videoTex(base + fmt.opening.lights) };
@@ -144,7 +144,7 @@ export async function createPlate(ctx, base = 'assets/scene/') {
   // luffy's hat"): no mask, no occluder
   let M = null;
   if (!B && fmt.baked) {
-    try { const { createBaked } = await import('./baked.js?v=1'); M = await createBaked(ctx, base + fmt.baked, { maskOnly: true }); }
+    try { const { createBaked } = await import('./baked.js?v=2'); M = await createBaked(ctx, base + fmt.baked, { maskOnly: true }); }
     catch (e) { M = null; if (window.console) console.info('mask not used:', e.message); }
   }
   let E = null;

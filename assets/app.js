@@ -16,7 +16,7 @@ import { createEnding, ITEMS } from './ending.js?v=36';
 import { createRingGate } from './ringgate.js?v=13';
 import { stillSvg } from './figures.js?v=15';
 import { createSound } from './sound.js?v=11';
-import { createPlate } from './plate.js?v=1';
+import { createPlate } from './plate.js?v=2';
 
 const html = document.documentElement;
 html.setAttribute('data-app', '1');   // the module ran: index.html's watchdog leaves the scene layout alone

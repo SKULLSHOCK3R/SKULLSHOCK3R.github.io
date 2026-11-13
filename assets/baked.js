@@ -854,16 +854,22 @@ export async function createBaked(ctx, base, opts = {}) {
   }
   // the frame: linear light, the render's shape, multisampled; and his mask, the same shape
   let target = null, backCopy = null, maskT = null, emptyT = null;
+  // Phones draw this frame at their own drawing size: with a 960 floor a phone at 499 x 1008 drew 960 x 1707 behind
+  // it (three times the pixels; 21 fps where the page without it ran at 60), and the page's quality step-down could
+  // not shrink it. Desktop keeps the 960 floor. Checking aids: ?bmin= the floor, ?bs= the smoothing samples (0 to 4)
+  const bq = new URLSearchParams(location.search);
+  const minW = bq.has('bmin') ? Math.max(240, parseInt(bq.get('bmin'), 10) || 960) : (ctx.phone ? 360 : 960);
+  const SAMPLES = bq.has('bs') ? Math.max(0, Math.min(4, parseInt(bq.get('bs'), 10) || 0)) : 4;
   function ensure(w) {
-    const tw = Math.min(3840, Math.max(960, Math.round(w))), th = Math.round(tw / aspect);
+    const tw = Math.min(3840, Math.max(minW, Math.round(w))), th = Math.round(tw / aspect);
     if (maskT && maskT.width === tw) return;
     if (maskT) { maskT.dispose(); if (target) { target.dispose(); backCopy.dispose(); } if (emptyT) { emptyT.dispose(); emptyT = null; } }
     // resolveDepthBuffer, resolveStencilBuffer false: only the colour is read afterwards. Left on (three's default),
     // every frame also copied the multisampled depth and stencil out: 3.0 of this draw's 6.2 ms at 1632 wide, 16 of
     // its 19.5 ms at 3840 (GPU timer, 2026-11-11), with nothing drawn at all
-    maskT = new THREE.WebGLRenderTarget(tw, th, { samples: 4, resolveDepthBuffer: false });
+    maskT = new THREE.WebGLRenderTarget(tw, th, { samples: SAMPLES, resolveDepthBuffer: false });
     if (maskOnly) return;
-    target = new THREE.WebGLRenderTarget(tw, th, { type: THREE.HalfFloatType, samples: 4, stencilBuffer: true, depthBuffer: true,
+    target = new THREE.WebGLRenderTarget(tw, th, { type: THREE.HalfFloatType, samples: SAMPLES, stencilBuffer: true, depthBuffer: true,
       resolveDepthBuffer: false, resolveStencilBuffer: false });
     backCopy = new THREE.WebGLRenderTarget(Math.round(tw / 2), Math.round(th / 2), { type: THREE.HalfFloatType });
     if (rain) rain.forEach((m) => { m.material.uniforms.tBack.value = backCopy.texture; m.material.uniforms.uSize.value.set(tw, th); });
@@ -913,7 +919,7 @@ export async function createBaked(ctx, base, opts = {}) {
       renderer.setRenderTarget(backCopy); renderer.render(backScene, camera);   // what lies behind the rain
       if (fig > 0.001) { renderer.setRenderTarget(target); renderer.render(scene, camera); }
       if (fig < 0.999) {
-        if (!emptyT) emptyT = new THREE.WebGLRenderTarget(target.width, target.height, { type: THREE.HalfFloatType, samples: 4, resolveDepthBuffer: false });
+        if (!emptyT) emptyT = new THREE.WebGLRenderTarget(target.width, target.height, { type: THREE.HalfFloatType, samples: SAMPLES, resolveDepthBuffer: false });
         const shown = [];
         for (const F of figs) for (const m of [...F.meshes, ...F.refls]) if (m.visible) { m.visible = false; shown.push(m); }
         renderer.setRenderTarget(emptyT); renderer.render(scene, camera);
