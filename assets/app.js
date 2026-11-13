@@ -324,9 +324,9 @@ async function main() {
     // display's interval. Stepping the resolution down and up again every second at 135 fps on the cores page read as
     // tearing and glitches (Robin: "the screen tears and glitchs ... as i ... scroll through the final rings")
     if (ctx.phone) {
-      // phones start at the screen's own sharpness and step down only while frames miss the display's rate (Robin,
-      // 2026-11-12: "how would make it look way better without cutting out performance"; his 2026-10-28 choice was 2x,
-      // igloo's cap 1.5x drew the globe soft), never below about 1.3x. A step up is taken only when the frame cost,
+      // phones climb from 2x towards the screen's own sharpness (layout) and step down while frames miss the
+      // display's rate (Robin, 2026-11-12: "how would make it look way better without cutting out performance"; his
+      // 2026-10-28 choice was 2x, igloo's cap 1.5x drew the globe soft), never below about 1.3x. A step up is taken only when the frame cost,
       // scaled by the pixels the step adds, still fits well inside the display's interval, so it does not step down
       // and up again every second (that read as tearing on the desktop, 2026-11-12)
       const floor = Math.min(1, 1.3 / Math.max(1, devicePixelRatio || 1));
@@ -347,6 +347,10 @@ async function main() {
     // the phone's portrait frame over a wide screen (Robin, 2026-11-12: "i can only see luffy's feet")
     if (W > 1 && ctx.phoneSet !== undefined && (W < 760) !== ctx.phoneSet) { location.reload(); return; }
     if (W > 1) ctx.phone = W < 760;
+    // a phone starts at 2x (Robin's choice, 2026-10-28, and again 2026-11-12: "didnt you suggest 2x?") and climbs
+    // towards its screen's own sharpness only while frames show room for it: started at the screen's own 2.6x and
+    // stepping down, a Galaxy S24 Ultra lagged (Robin, 2026-11-12: "its very laggy on my phone")
+    if (ctx.phone && !perf.phoneStart && !holdQ && W > 1) { perf.phoneStart = true; perf.q = Math.min(1, 2 / Math.max(1, devicePixelRatio || 1)); }
     // phones at the screen's own pixel ratio, the governor stepping down from there (above); desktops at their own up
     // to 2x
     dpr = Math.min(devicePixelRatio || 1, ctx.phone ? 4 : 2) * perf.q;
