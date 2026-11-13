@@ -351,16 +351,24 @@ async function main() {
     post.setSize(W, H, dpr);
     hudLines.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   }
-  // touch screens scroll a virtual page, as igloo.inc's phone site does (Robin, 2026-10-29: "a very slow scroll exactly
-  // the same as ... the igloo phone site", and a pull down at the landing kept reloading the page): the document itself
-  // never scrolls there (html.touchscroll: overflow hidden, touch-action none), so the browser has no pull-to-refresh or
-  // fling to run; a finger moves the page at TOUCH_GAIN of its travel and a flick carries on briefly, then settles
-  const TOUCH_GAIN = 0.5, FLING = 0.45, FLING_DECAY = 4;
-  const vs = { on: !!(window.matchMedia && matchMedia('(pointer: coarse)').matches), y: 0, goal: -1, v: 0 };
-  if (vs.on) html.classList.add('touchscroll');
-  const pageY = () => (vs.on ? vs.y : scrollY);
-  function setPageY(y) {
-    if (vs.on) { vs.y = clamp(y, 0, maxScroll()); vs.goal = -1; vs.v = 0; } else scrollTo({ top: y, behavior: 'instant' });
+  // the page is virtual, as on igloo.inc: the document itself never scrolls (html.touchscroll: overflow hidden,
+  // touch-action none), so the browser has no pull-to-refresh or fling of its own (Robin, 2026-10-29: a pull down at
+  // the landing kept reloading the page); a finger moves the target at TOUCH_GAIN of its travel. igloo.inc's scroll on every screen (Robin, 2026-11-12: "yes match igloo", from its own code): the wheel, a finger
+  // and the keys move a target (t2); a middle point (t1) follows it at 0.075 a 60 Hz frame, never faster than 100 units
+  // a frame, and the page (y) follows that at 0.15, so it starts and stops softly at any refresh rate; the target is
+  // held within 750 units of the page, so a burst of scrolling cannot run far ahead. One unit is igloo's 0.00075 of a
+  // screen
+  const TOUCH_GAIN = 0.5;
+  const vs = { on: true, y: 0, t1: 0, t2: 0, tw: null, snap: false };
+  html.classList.add('touchscroll');
+  const unit = () => 0.00075 * innerHeight;
+  const pageY = () => vs.y;
+  function setPageY(y) { vs.y = vs.t1 = vs.t2 = clamp(y, 0, maxScroll()); vs.tw = null; vs.snap = false; }
+  function push(d) {   // moves the target, as igloo's wheel, touch and key handlers do; any input stops a glide
+    vs.tw = null;
+    vs.t2 = clamp(vs.t2 + d, 0, maxScroll());
+    vs.snap = true; lastScrollAt = performance.now();
+    if (d) lastDir = d > 0 ? 1 : -1;
   }
   function pageLayout() {
     // each scene takes STROLL screens of scrolling (Robin, 2026-10-26: "we fly through the animation, more like a
@@ -368,7 +376,7 @@ async function main() {
     const oldPH = PH;
     PH = innerHeight * STROLL;
     spacer.style.height = ((PAGES + 1) * PH) + 'px';
-    if (vs.on && oldPH > 1) vs.y *= PH / oldPH;   // a turned phone keeps its place in the story
+    if (oldPH > 1) setPageY(vs.y * PH / oldPH);   // a resized window or turned phone keeps its place in the story
   }
   layout();
   pageLayout();
@@ -379,103 +387,85 @@ async function main() {
   // always open at the landing (Robin, 2026-10-26: a reload restored the last scroll and opened mid-globe)
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   if (debugT === null) scrollTo(0, 0);
-  let lastDir = 1, lastY = pageY();
-  addEventListener('scroll', () => {
-    lastScrollAt = performance.now();
-    if (!programmatic && scrollY !== lastY) lastDir = scrollY > lastY ? 1 : -1;
-    lastY = scrollY;
-  }, { passive: true });
+  let lastDir = 1;
+  const linePx = 16;
   addEventListener('wheel', (e) => {
-    programmatic = 0;
-    if (e.deltaY) lastDir = e.deltaY > 0 ? 1 : -1;
-    if (pageY() >= maxScroll() - 2 && e.deltaY > 0) overscroll += e.deltaY;
-    if (pageY() <= 2 && e.deltaY < 0) underscroll -= e.deltaY;
-    if (vs.on && !sheet.classList.contains('open')) { vs.goal = -1; vs.v = 0; vs.y = clamp(vs.y + e.deltaY, 0, maxScroll()); lastScrollAt = performance.now(); }
+    if (sheet.classList.contains('open')) return;   // the open sheet scrolls its own text
+    // a mouse wheel in lines (Firefox) or pages is put in pixels first, as igloo does
+    const d = e.deltaY * (e.deltaMode === 1 ? linePx : e.deltaMode === 2 ? innerHeight : 1);
+    if (vs.t2 >= maxScroll() - 2 && d > 0) overscroll += d;
+    if (vs.t2 <= 2 && d < 0) underscroll -= d;
+    push(d * unit());
   }, { passive: true });
-  addEventListener('touchstart', () => { touching = true; programmatic = 0; }, { passive: true });
+  addEventListener('touchstart', () => { touching = true; }, { passive: true });
   addEventListener('touchend', () => { touching = false; }, { passive: true });
-  let touchY = null, touchAt = 0, touchV = 0;
+  let touchY = null;
   addEventListener('touchstart', (e) => {
-    if (!vs.on || e.touches.length !== 1) return;
-    touchY = e.touches[0].clientY; touchAt = e.timeStamp; touchV = 0; vs.v = 0; vs.goal = -1;
+    if (e.touches.length !== 1) return;
+    touchY = e.touches[0].clientY;
   }, { passive: true });
   addEventListener('touchmove', (e) => {
     const y = e.touches[0].clientY;
-    if (vs.on) {
-      // the open sheet scrolls its own text; elsewhere the page is ours, so the browser gets no pull-to-refresh
-      if (sheet.classList.contains('open')) { touchY = null; return; }
-      if (e.cancelable) e.preventDefault();
-      if (touchY === null) { touchY = y; touchAt = e.timeStamp; return; }
-      const dy = touchY - y, dts = Math.max(1, e.timeStamp - touchAt) / 1000;
-      if (vs.y >= maxScroll() - 2 && dy > 0) overscroll += dy * 2.5;
-      if (vs.y <= 2 && dy < 0) underscroll -= dy * 2.5;
-      vs.y = clamp(vs.y + dy * TOUCH_GAIN, 0, maxScroll());
-      touchV = touchV * 0.6 + (dy * TOUCH_GAIN / dts) * 0.4;   // smoothed finger speed, page px a second
-      if (dy) { lastDir = dy > 0 ? 1 : -1; lastScrollAt = performance.now(); }
-      touchY = y; touchAt = e.timeStamp;
-      return;
-    }
-    if (touchY !== null && scrollY >= maxScroll() - 2 && touchY - y > 0) overscroll += (touchY - y) * 2.5;
-    if (touchY !== null && scrollY <= 2 && y - touchY > 0) underscroll += (y - touchY) * 2.5;
+    // the open sheet scrolls its own text; elsewhere the page is ours, so the browser gets no pull-to-refresh
+    if (sheet.classList.contains('open')) { touchY = null; return; }
+    if (e.cancelable) e.preventDefault();
+    if (touchY === null) { touchY = y; return; }
+    const dy = touchY - y;
+    if (vs.t2 >= maxScroll() - 2 && dy > 0) overscroll += dy * 2.5;
+    if (vs.t2 <= 2 && dy < 0) underscroll -= dy * 2.5;
+    // a finger moves the target, and the two followers give the glide after it lifts (no separate fling, as igloo)
+    if (dy) push(dy * TOUCH_GAIN);
     touchY = y;
   }, { passive: false });
-  const touchUp = (e) => {
-    // a flick carries on a little (a finger resting before it lifts throws nothing)
-    if (vs.on && touchY !== null && e.timeStamp - touchAt < 80) vs.v = clamp(touchV * FLING, -PH * 0.6, PH * 0.6);
-    touchY = null;
-  };
+  const touchUp = () => { touchY = null; };
   addEventListener('touchend', touchUp, { passive: true });
   addEventListener('touchcancel', touchUp, { passive: true });
   addEventListener('keydown', (e) => {
-    if (sheet.classList.contains('open')) return;
-    const down = e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ', up = e.key === 'ArrowUp' || e.key === 'PageUp';
-    if (down && pageY() >= maxScroll() - 2) overscroll += 300;
-    if (up && pageY() <= 2) underscroll += 300;
-    // a keyboard on a touch screen (a tablet's) steps the virtual page
-    if (vs.on && (down || up) && !e.target.closest('a, button, input')) { e.preventDefault(); vs.goal = -1; vs.v = (down ? 1 : -1) * PH * 0.35 * FLING_DECAY; lastDir = down ? 1 : -1; }
+    if (sheet.classList.contains('open') || e.target.closest('a, button, input')) return;
+    const arrow = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+    const page = e.key === 'PageDown' || e.key === ' ' ? 1 : e.key === 'PageUp' ? -1 : 0;
+    if (!arrow && !page) return;
+    e.preventDefault();
+    const dir = arrow || page;
+    if (dir > 0 && vs.t2 >= maxScroll() - 2) overscroll += 300;
+    if (dir < 0 && vs.t2 <= 2) underscroll += 300;
+    // the arrows as igloo's (150 units); a page key a third of a scene
+    push(arrow ? arrow * 150 * unit() : page * PH / 3);
   });
   function maxScroll() { return PAGES * PH; }
+  // a glide to y over dur seconds, easing in and out (igloo's "inOut3"); any input stops it
+  function glideTo(y, dur) {
+    y = clamp(y, 0, maxScroll());
+    if (Math.abs(y - vs.y) < 0.5) { setPageY(y); return; }
+    vs.tw = { from: vs.y, to: y, t0: performance.now(), dur: dur * 1000 };
+    vs.snap = false;
+  }
   function scrollToPage(p, instant) {
-    programmatic = performance.now();
-    if (vs.on) { if (instant) setPageY(p * PH); else { vs.goal = clamp(p * PH, 0, maxScroll()); vs.v = 0; } }
-    else scrollTo({ top: p * PH, behavior: instant ? 'instant' : 'smooth' });
+    if (instant) setPageY(p * PH); else glideTo(p * PH, 1.4);
   }
-  // moves the virtual page each frame: a flick's glide, or the ease onto a scene that scrollToPage asked for
-  function touchScrollTick(dt, now) {
-    if (!vs.on || touching) return;
-    if (vs.goal >= 0) {
-      vs.y += (vs.goal - vs.y) * (1 - Math.exp(-dt * 3));
-      if (Math.abs(vs.goal - vs.y) < 0.5) { vs.y = vs.goal; vs.goal = -1; }
-    } else if (vs.v) {
-      const y0 = vs.y;
-      vs.y = clamp(vs.y + vs.v * dt, 0, maxScroll());
-      if (vs.y === 0 && y0 > 0 && vs.v < 0) underscroll -= vs.v * dt;   // a flick into an end still counts as a pull
-      if (vs.y === maxScroll() && y0 < vs.y && vs.v > 0) overscroll += vs.v * dt;
-      vs.v *= Math.exp(-dt * FLING_DECAY);
-      if (Math.abs(vs.v) < 4 || vs.y === 0 || vs.y === maxScroll()) vs.v = 0;
-      lastScrollAt = now;
-    }
-  }
-  function snapTick(now, target) {
-    if (touching || sheet.classList.contains('open')) return;
-    if (programmatic && now - programmatic < 1400) {
-      if (Math.abs(pageY() - Math.round(pageY() / PH) * PH) < 1.5) programmatic = 0;
+  // each frame: the glide if one is running, else the target's two followers (igloo's lerpFPSLimited and lerpFPS, at
+  // the frame's share of a 60 Hz frame)
+  function scrollTick(dt, now) {
+    if (vs.tw) {
+      const k = clamp((now - vs.tw.t0) / vs.tw.dur, 0, 1), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(2 - 2 * k, 3) / 2;
+      vs.y = vs.t1 = vs.t2 = vs.tw.from + (vs.tw.to - vs.tw.from) * e;
+      if (k >= 1) vs.tw = null;
       return;
     }
-    programmatic = 0;
-    // igloo-style gravity (Robin, 2026-10-26: "some gravity ... not as strong as you set it, similar to the igloo
-    // page"): once scrolling has rested about half a second, the page eases onto a scene. Past a quarter of the way in
-    // the direction of travel it carries on to the next scene; short of that it falls back to the one it left
-    const lo = Math.floor(target), frac = target - lo;
-    // the last transition (cores to the ending, through the ring gate) pulls far more gently (Robin, 2026-10-26: "the
-    // gravity on the last transition seems very high"): a longer rest first, and it carries on only past 60 %
-    // on a touch screen a finger moves the page slowly, so one deliberate swipe (a tenth of the way) is enough to
-    // carry on to the next scene rather than fall back (2026-10-29)
-    const last = lo === PAGES - 1, carry = vs.on ? (last ? 0.3 : 0.1) : (last ? 0.6 : 0.25);
-    if (now - lastScrollAt < (last ? 1200 : 550)) return;
-    if (frac < 0.004 || frac > 0.996) return;
-    const next = lastDir > 0 ? (frac > carry ? lo + 1 : lo) : (frac < 1 - carry ? lo : lo + 1);
-    scrollToPage(Math.min(PAGES, next));
+    const r = dt * 60, u = unit(), coef = (t) => 1 - Math.pow(1 - t, r);
+    vs.t1 += clamp((vs.t2 - vs.t1) * coef(0.075), -100 * u * r, 100 * u * r);
+    vs.y += (vs.t1 - vs.y) * coef(0.15);
+    vs.t2 = clamp(vs.t2, vs.y - 750 * u, vs.y + 750 * u);
+    if (Math.abs(vs.y - vs.t2) < 0.1 * u) vs.y = vs.t1 = vs.t2;
+  }
+  // igloo's settle (its autoCenter): 1.4 s after the last input, a 2 s glide onto the nearest scene, unless the page
+  // already rests on one (this replaces the earlier carry-on rules: igloo's pull is gentler than they were)
+  function snapTick(now) {
+    if (!vs.snap || vs.tw || touching || sheet.classList.contains('open')) return;
+    if (now - lastScrollAt < 1400) return;
+    vs.snap = false;
+    const to = Math.round(vs.t2 / PH) * PH;
+    if (Math.abs(to - vs.y) > 0.5) glideTo(to, 2);
   }
   // keyboard focus inside a scene brings that scene up
   addEventListener('focusin', (e) => {
@@ -614,13 +604,11 @@ async function main() {
     }
 
     // scroll smoothing, snapping, the loop past the end
-    touchScrollTick(dt, now);
-    const target = clamp(pageY() / PH, 0, PAGES);
-    cur += (target - cur) * (1 - Math.exp(-dt * 3.5));   // eases after the scroll, unhurried
-    if (Math.abs(target - cur) < 0.0004) cur = target;
+    scrollTick(dt, now);
+    cur = clamp(pageY() / PH, 0, PAGES);   // the page is already eased by its two followers (scrollTick)
     vel = (cur - prevCur) / dt; prevCur = cur;
     if (debugT !== null && params.has('still')) vel = 0;   // ?still freezes scroll effects for screenshots
-    else snapTick(now, target);
+    else snapTick(now);
     overscroll *= Math.exp(-dt * 2.5);
     underscroll *= Math.exp(-dt * 2.5);
     let loopWhite = 0;
