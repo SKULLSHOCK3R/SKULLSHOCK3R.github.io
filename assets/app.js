@@ -370,9 +370,14 @@ async function main() {
   // held within 750 units of the page, so a burst of scrolling cannot run far ahead. One unit is igloo's 0.00075 of a
   // screen
   const TOUCH_GAIN = 0.5;
+  // Phones (2026-11-13): igloo's scroll works in scenes (one of its units is 0.00075 of a scene, and a finger moves
+  // its target 1.25 per half screen of travel, so a swipe of 40 % of the screen is one scene). Here a scene is STROLL
+  // screens, so on phones the unit is taken from the scene and a finger moves the target at igloo's rate; it had been
+  // about eleven times slower. Desktop keeps its screen-based unit and TOUCH_GAIN.
+  const PHONE_TOUCH_SCENES = 2.5;          // scenes per screen height of finger travel (igloo: 1.25 x a half screen)
   const vs = { on: true, y: 0, t1: 0, t2: 0, tw: null, snap: false };
   html.classList.add('touchscroll');
-  const unit = () => 0.00075 * innerHeight;
+  const unit = () => 0.00075 * (ctx.phone ? PH : innerHeight);
   const pageY = () => vs.y;
   function setPageY(y) { vs.y = vs.t1 = vs.t2 = clamp(y, 0, maxScroll()); vs.tw = null; vs.snap = false; }
   function push(d) {   // moves the target, as igloo's wheel, touch and key handlers do; any input stops a glide
@@ -425,7 +430,7 @@ async function main() {
     if (vs.t2 >= maxScroll() - 2 && dy > 0) overscroll += dy * 2.5;
     if (vs.t2 <= 2 && dy < 0) underscroll -= dy * 2.5;
     // a finger moves the target, and the two followers give the glide after it lifts (no separate fling, as igloo)
-    if (dy) push(dy * TOUCH_GAIN);
+    if (dy) push(dy * (ctx.phone ? PHONE_TOUCH_SCENES * PH / innerHeight : TOUCH_GAIN));
     touchY = y;
   }, { passive: false });
   const touchUp = () => { touchY = null; };
